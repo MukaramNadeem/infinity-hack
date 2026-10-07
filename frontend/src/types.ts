@@ -1,9 +1,11 @@
-// Mirrors API_CONTRACT.md at the repo root. Keep the two in sync.
+// Mirrors the backend API: backend/docs/openapi.yaml (interactive docs at /api/docs).
+// Keep the two in sync.
 
-export type Role = 'ADMIN' | 'MANAGER' | 'AGENT'
+export type Role = 'ADMIN' | 'MANAGER' | 'DEVELOPER'
 
 export interface User {
   id: string
+  code: string // directory reference: ADMIN, PM01–PM03, DEV01–DEV06
   name: string
   email: string
   role: Role
@@ -13,17 +15,22 @@ export interface User {
 
 export interface UserRef {
   id: string
+  code: string
   name: string
 }
+
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE'
 
 export interface Task {
   id: string
   projectId: string
+  project: { id: string; name: string; clientName: string }
   title: string
   description: string
   assignee: UserRef
   deadline: string
   estimatedHours: number
+  status: TaskStatus
 }
 
 export interface ProjectSummary {
@@ -32,39 +39,35 @@ export interface ProjectSummary {
   clientName: string
   description: string
   manager: UserRef
+  members: UserRef[]
   deadline: string
-  taskCount: number
-  totalHours: number
+  taskCount: number // tasks THIS user can see
+  totalEstimatedHours: number // hours of tasks THIS user can see
 }
 
 export interface ProjectDetail extends ProjectSummary {
   tasks: Task[]
 }
 
-export interface MyTask extends Task {
-  project: {
-    id: string
-    name: string
-    clientName: string
-    deadline: string
-    manager: UserRef
-  }
-}
+// GET /tasks returns each task with its project, so "my task" is just a Task.
+export type MyTask = Task
 
+// AI draft: any field may be null when the AI could not determine it.
+// People are referenced by directory code (e.g. PM01, DEV03).
 export interface DraftTask {
-  title: string
-  description: string
-  assigneeId: string
-  deadline: string
-  estimatedHours: number
+  title: string | null
+  description: string | null
+  assigneeCode: string | null
+  deadline: string | null
+  estimatedHours: number | null
 }
 
 export interface DraftProject {
-  name: string
-  clientName: string
-  description: string
-  managerId: string
-  deadline: string
+  name: string | null
+  clientName: string | null
+  description: string | null
+  managerCode: string | null
+  deadline: string | null
   tasks: DraftTask[]
 }
 
@@ -73,13 +76,13 @@ export interface Draft {
 }
 
 export interface TranscriptResult {
-  projects: ProjectSummary[]
-  projectCount: number
-  taskCount: number
+  transcriptId: string
+  totals: { projects: number; tasks: number; estimatedHours: number }
+  projects: ProjectDetail[]
 }
 
 export interface DraftIssue {
-  path: string
+  path: string // dot path, e.g. "projects.2.tasks.1.assigneeCode"
   message: string
 }
 

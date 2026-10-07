@@ -1,0 +1,81 @@
+// NovaWorks PM CRM — database schema.
+// SQLite has no enums or scalar lists, so `role`, `status` and `skills` are strings
+// validated in the application layer (Zod):
+//   User.role   : ADMIN | MANAGER | DEVELOPER
+//   Task.status : TODO | IN_PROGRESS | DONE
+//   User.skills : JSON-encoded string array
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  code           String   @unique // ADMIN, PM01..PM03, DEV01..DEV06 — reference used by the AI
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           String
+  specialization String
+  skills         String   @default("[]")
+  createdAt      DateTime @default(now())
+
+  managedProjects Project[]    @relation("ProjectManager")
+  assignedTasks   Task[]       @relation("TaskAssignee")
+  transcripts     Transcript[]
+}
+
+model Transcript {
+  id          String    @id @default(cuid())
+  content     String
+  contentHash String // sha256 of content — duplicate-submission guard
+  meetingDate DateTime?
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  projects Project[]
+
+  @@index([contentHash])
+}
+
+model Project {
+  id           String      @id @default(cuid())
+  name         String
+  clientName   String
+  description  String      @default("")
+  deadline     DateTime // date-only, stored at 00:00 UTC
+  managerId    String
+  manager      User        @relation("ProjectManager", fields: [managerId], references: [id])
+  transcriptId String?
+  transcript   Transcript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tasks Task[]
+
+  @@index([managerId])
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  description    String   @default("")
+  assigneeId     String
+  assignee       User     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  deadline       DateTime // date-only, stored at 00:00 UTC
+  estimatedHours Float
+  status         String   @default("TODO")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([assigneeId])
+}

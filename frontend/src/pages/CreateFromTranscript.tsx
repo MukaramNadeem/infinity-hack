@@ -93,8 +93,8 @@ export default function CreateFromTranscript() {
           <div className="space-y-4">
             <div className="rounded-[14px] bg-[#00b69b]/15 px-5 py-4 text-[#00806d]">
               <span className="font-semibold">
-                Created {status.result.projectCount} project{status.result.projectCount === 1 ? '' : 's'} and {status.result.taskCount} task
-                {status.result.taskCount === 1 ? '' : 's'}.
+                Created {status.result.totals.projects} project{status.result.totals.projects === 1 ? '' : 's'} and {status.result.totals.tasks} task
+                {status.result.totals.tasks === 1 ? '' : 's'}.
               </span>{' '}
               <Link to="/projects" className="underline">
                 View all projects
@@ -115,7 +115,7 @@ export default function CreateFromTranscript() {
             initial={status.draft}
             issues={status.issues}
             users={users ?? []}
-            onSubmit={(draft) => run(() => api.fromDraft(draft), 'Validating and saving corrected projects…')}
+            onSubmit={(draft) => run(() => api.fromDraft(transcript, draft), 'Validating and saving corrected projects…')}
           />
         )}
       </div>
@@ -138,7 +138,7 @@ function DraftEditor({
 }) {
   const [draft, setDraft] = useState<Draft>(() => structuredClone(initial))
   const managers = users.filter((u) => u.role === 'MANAGER')
-  const agents = users.filter((u) => u.role === 'AGENT')
+  const agents = users.filter((u) => u.role === 'DEVELOPER')
   const issueAt = (path: string) => issues.filter((i) => i.path === path).map((i) => i.message)
   const cls = (path: string) => `${input} ${issueAt(path).length ? 'border-red-400 bg-red-50' : 'border-line'}`
 
@@ -150,8 +150,8 @@ function DraftEditor({
     })
   }
 
-  // Issues not tied to a specific editable field (e.g. "projects", "projects[0].tasks").
-  const general = issues.filter((i) => !/\.(name|clientName|managerId|deadline|title|assigneeId|estimatedHours)$/.test(i.path))
+  // Issues not tied to a specific editable field (e.g. "projects": no projects found).
+  const general = issues.filter((i) => !/\.(name|clientName|managerCode|deadline|title|assigneeCode|estimatedHours)$/.test(i.path))
 
   return (
     <div className="space-y-5">
@@ -171,17 +171,17 @@ function DraftEditor({
       {draft.projects.map((p, i) => (
         <div key={i} className="card p-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Project name" errors={issueAt(`projects[${i}].name`)}>
-              <input className={cls(`projects[${i}].name`)} value={p.name ?? ''} onChange={(e) => edit((d) => (d.projects[i].name = e.target.value))} />
+            <Field label="Project name" errors={issueAt(`projects.${i}.name`)}>
+              <input className={cls(`projects.${i}.name`)} value={p.name ?? ''} onChange={(e) => edit((d) => (d.projects[i].name = e.target.value))} />
             </Field>
-            <Field label="Client" errors={issueAt(`projects[${i}].clientName`)}>
-              <input className={cls(`projects[${i}].clientName`)} value={p.clientName ?? ''} onChange={(e) => edit((d) => (d.projects[i].clientName = e.target.value))} />
+            <Field label="Client" errors={issueAt(`projects.${i}.clientName`)}>
+              <input className={cls(`projects.${i}.clientName`)} value={p.clientName ?? ''} onChange={(e) => edit((d) => (d.projects[i].clientName = e.target.value))} />
             </Field>
-            <Field label="Manager" errors={issueAt(`projects[${i}].managerId`)}>
-              <PersonSelect className={cls(`projects[${i}].managerId`)} value={p.managerId} people={managers} onChange={(v) => edit((d) => (d.projects[i].managerId = v))} />
+            <Field label="Manager" errors={issueAt(`projects.${i}.managerCode`)}>
+              <PersonSelect className={cls(`projects.${i}.managerCode`)} value={p.managerCode} people={managers} onChange={(v) => edit((d) => (d.projects[i].managerCode = v))} />
             </Field>
-            <Field label="Deadline" errors={issueAt(`projects[${i}].deadline`)}>
-              <input type="date" className={cls(`projects[${i}].deadline`)} value={p.deadline ?? ''} onChange={(e) => edit((d) => (d.projects[i].deadline = e.target.value))} />
+            <Field label="Deadline" errors={issueAt(`projects.${i}.deadline`)}>
+              <input type="date" className={cls(`projects.${i}.deadline`)} value={p.deadline ?? ''} onChange={(e) => edit((d) => (d.projects[i].deadline = e.target.value))} />
             </Field>
           </div>
 
@@ -197,8 +197,8 @@ function DraftEditor({
               </thead>
               <tbody>
                 {(p.tasks ?? []).map((t, j) => {
-                  const at = `projects[${i}].tasks[${j}]`
-                  const errs = [...issueAt(`${at}.title`), ...issueAt(`${at}.assigneeId`), ...issueAt(`${at}.deadline`), ...issueAt(`${at}.estimatedHours`)]
+                  const at = `projects.${i}.tasks.${j}`
+                  const errs = [...issueAt(`${at}.title`), ...issueAt(`${at}.assigneeCode`), ...issueAt(`${at}.deadline`), ...issueAt(`${at}.estimatedHours`)]
                   return (
                     <tr key={j} className="align-top">
                       <td className="py-1 pr-2">
@@ -206,7 +206,7 @@ function DraftEditor({
                         {errs.length > 0 && <div className="mt-1 text-xs text-red-600">{errs.join(' ')}</div>}
                       </td>
                       <td className="py-1 pr-2">
-                        <PersonSelect className={cls(`${at}.assigneeId`)} value={t.assigneeId} people={agents} onChange={(v) => edit((d) => (d.projects[i].tasks[j].assigneeId = v))} />
+                        <PersonSelect className={cls(`${at}.assigneeCode`)} value={t.assigneeCode} people={agents} onChange={(v) => edit((d) => (d.projects[i].tasks[j].assigneeCode = v))} />
                       </td>
                       <td className="py-1 pr-2">
                         <input type="date" className={cls(`${at}.deadline`)} value={t.deadline ?? ''} onChange={(e) => edit((d) => (d.projects[i].tasks[j].deadline = e.target.value))} />
@@ -217,8 +217,11 @@ function DraftEditor({
                           min={0.5}
                           step={0.5}
                           className={cls(`${at}.estimatedHours`)}
-                          value={Number.isFinite(t.estimatedHours) ? t.estimatedHours : ''}
-                          onChange={(e) => edit((d) => (d.projects[i].tasks[j].estimatedHours = e.target.valueAsNumber))}
+                          value={t.estimatedHours ?? ''}
+                          onChange={(e) => {
+                            const hours = e.target.valueAsNumber
+                            edit((d) => (d.projects[i].tasks[j].estimatedHours = Number.isNaN(hours) ? null : hours))
+                          }}
                         />
                       </td>
                     </tr>
@@ -247,16 +250,17 @@ function Field({ label, errors, children }: { label: string; errors: string[]; c
   )
 }
 
-function PersonSelect({ value, people, onChange, className }: { value: string; people: User[]; onChange: (v: string) => void; className: string }) {
-  const known = people.some((p) => p.id === value)
+// Draft people are directory codes (PM01, DEV03, …), so options use `code` as their value.
+function PersonSelect({ value, people, onChange, className }: { value: string | null; people: User[]; onChange: (v: string) => void; className: string }) {
+  const known = people.some((p) => p.code === value)
   return (
-    <select className={className} value={known ? value : ''} onChange={(e) => onChange(e.target.value)}>
+    <select className={className} value={known && value ? value : ''} onChange={(e) => onChange(e.target.value)}>
       <option value="" disabled>
         {value && !known ? `Unknown: ${value}` : 'Select…'}
       </option>
       {people.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name} ({p.id})
+        <option key={p.id} value={p.code}>
+          {p.name} ({p.code})
         </option>
       ))}
     </select>

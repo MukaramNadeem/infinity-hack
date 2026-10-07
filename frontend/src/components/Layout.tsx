@@ -20,8 +20,8 @@ export default function Layout() {
   if (!user) return null
 
   const links = [
-    { to: '/projects', label: user.role === 'AGENT' ? 'My Projects' : 'Projects', icon: dashboardIcon, show: true },
-    { to: '/my-tasks', label: 'My Tasks', icon: todoIcon, show: user.role === 'AGENT' },
+    { to: '/projects', label: user.role === 'DEVELOPER' ? 'My Projects' : 'Projects', icon: dashboardIcon, show: true },
+    { to: '/my-tasks', label: 'My Tasks', icon: todoIcon, show: user.role === 'DEVELOPER' },
     { to: '/transcript', label: 'Import Transcript', icon: chatIcon, show: user.role === 'ADMIN' },
     { to: '/team', label: 'Team', icon: teamIcon, show: true },
   ].filter((l) => l.show)

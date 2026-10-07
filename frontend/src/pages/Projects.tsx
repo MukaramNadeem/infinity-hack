@@ -23,7 +23,7 @@ export function ProjectCard({ p }: { p: ProjectSummary }) {
         <dd className="text-right text-slate-800">{formatDate(p.deadline)}</dd>
         <dt className="text-slate-500">Tasks</dt>
         <dd className="text-right text-slate-800">
-          {p.taskCount} · {p.totalHours}h
+          {p.taskCount} · {p.totalEstimatedHours}h
         </dd>
       </dl>
     </Link>
@@ -32,7 +32,7 @@ export function ProjectCard({ p }: { p: ProjectSummary }) {
 
 function Stats({ projects, agent }: { projects: ProjectSummary[]; agent: boolean }) {
   const tasks = projects.reduce((s, p) => s + p.taskCount, 0)
-  const hours = projects.reduce((s, p) => s + p.totalHours, 0)
+  const hours = projects.reduce((s, p) => s + p.totalEstimatedHours, 0)
   const next = projects.map((p) => p.deadline).sort()[0]
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-3">
@@ -57,7 +57,7 @@ export default function Projects() {
   return (
     <>
       <PageHeader
-        title={user?.role === 'AGENT' ? 'My Projects' : 'Projects'}
+        title={user?.role === 'DEVELOPER' ? 'My Projects' : 'Projects'}
         subtitle={subtitle}
         action={
           user?.role === 'ADMIN' && (
@@ -83,7 +83,7 @@ export default function Projects() {
           )}
         </Empty>
       )}
-      {data && data.length > 0 && <Stats projects={data} agent={user?.role === 'AGENT'} />}
+      {data && data.length > 0 && <Stats projects={data} agent={user?.role === 'DEVELOPER'} />}
       {data && data.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((p) => (

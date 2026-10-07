@@ -59,7 +59,7 @@ export function Empty({ children }: { children: ReactNode }) {
 const roleStyles: Record<Role, string> = {
   ADMIN: 'bg-[#6226ef]/20 text-[#6226ef]',
   MANAGER: 'bg-[#4880ff]/20 text-[#4880ff]',
-  AGENT: 'bg-[#00b69b]/20 text-[#00b69b]',
+  DEVELOPER: 'bg-[#00b69b]/20 text-[#00b69b]',
 }
 
 export function RoleBadge({ role }: { role: Role }) {

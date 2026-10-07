@@ -1,6 +1,6 @@
-// In-browser fake backend that follows API_CONTRACT.md, so the UI can be built
-// and demoed before the real backend exists. Used only when VITE_API_URL is
-// empty or VITE_USE_MOCK=true. Data persists in localStorage.
+// In-browser fake backend that returns the same shapes as the real backend
+// (backend/docs/openapi.yaml), so the UI can be demoed without running it.
+// Used only when VITE_API_URL is empty or VITE_USE_MOCK=true. Data persists in localStorage.
 //
 // The "AI" here is NOT real: it returns the reference draft from the brief.
 // Include the word INVALID in the transcript to get a 422 and test the
@@ -8,52 +8,53 @@
 
 import type { Draft, DraftIssue, ProjectSummary, Task, User } from '../types'
 
-const DB_KEY = 'nw_mock_db'
+const DB_KEY = 'nw_mock_db_v2' // v2: backend-shaped data (draft codes, statuses)
 
+// Mock user ids equal their directory codes; the real backend uses generated ids.
 const USERS: User[] = [
-  { id: 'ADMIN', name: 'Admin', email: 'admin@novaworks.example', role: 'ADMIN', specialization: 'Administrator', skills: ['Company overview', 'transcript creation'] },
-  { id: 'PM01', name: 'Ayesha Khan', email: 'ayesha@novaworks.example', role: 'MANAGER', specialization: 'Web PM', skills: ['Web projects', 'client coordination'] },
-  { id: 'PM02', name: 'Bilal Ahmed', email: 'bilal@novaworks.example', role: 'MANAGER', specialization: 'Mobile PM', skills: ['Mobile projects', 'delivery planning'] },
-  { id: 'PM03', name: 'Hina Malik', email: 'hina@novaworks.example', role: 'MANAGER', specialization: 'AI PM', skills: ['AI projects', 'requirement review'] },
-  { id: 'DEV01', name: 'Ali Raza', email: 'ali@novaworks.example', role: 'AGENT', specialization: 'Full-Stack', skills: ['React', 'frontend integration'] },
-  { id: 'DEV02', name: 'Hamza Shah', email: 'hamza@novaworks.example', role: 'AGENT', specialization: 'Full-Stack', skills: ['Node.js', 'databases', 'APIs'] },
-  { id: 'DEV03', name: 'Sara Noor', email: 'sara@novaworks.example', role: 'AGENT', specialization: 'App Developer', skills: ['Flutter', 'mobile UI'] },
-  { id: 'DEV04', name: 'Usman Tariq', email: 'usman@novaworks.example', role: 'AGENT', specialization: 'App Developer', skills: ['Flutter', 'integration', 'testing'] },
-  { id: 'DEV05', name: 'Zain Abbas', email: 'zain@novaworks.example', role: 'AGENT', specialization: 'AI Developer', skills: ['LLMs', 'extraction', 'prompts'] },
-  { id: 'DEV06', name: 'Maryam Asif', email: 'maryam@novaworks.example', role: 'AGENT', specialization: 'AI Developer', skills: ['Retrieval', 'document processing'] },
+  { id: 'ADMIN', code: 'ADMIN', name: 'Admin', email: 'admin@novaworks.example', role: 'ADMIN', specialization: 'Administrator', skills: ['Company overview', 'Transcript creation'] },
+  { id: 'PM01', code: 'PM01', name: 'Ayesha Khan', email: 'ayesha@novaworks.example', role: 'MANAGER', specialization: 'Web PM', skills: ['Web projects', 'Client coordination'] },
+  { id: 'PM02', code: 'PM02', name: 'Bilal Ahmed', email: 'bilal@novaworks.example', role: 'MANAGER', specialization: 'Mobile PM', skills: ['Mobile projects', 'Delivery planning'] },
+  { id: 'PM03', code: 'PM03', name: 'Hina Malik', email: 'hina@novaworks.example', role: 'MANAGER', specialization: 'AI PM', skills: ['AI projects', 'Requirement review'] },
+  { id: 'DEV01', code: 'DEV01', name: 'Ali Raza', email: 'ali@novaworks.example', role: 'DEVELOPER', specialization: 'Full-Stack', skills: ['React', 'Frontend integration'] },
+  { id: 'DEV02', code: 'DEV02', name: 'Hamza Shah', email: 'hamza@novaworks.example', role: 'DEVELOPER', specialization: 'Full-Stack', skills: ['Node.js', 'Databases', 'APIs'] },
+  { id: 'DEV03', code: 'DEV03', name: 'Sara Noor', email: 'sara@novaworks.example', role: 'DEVELOPER', specialization: 'App Developer', skills: ['Flutter', 'Mobile UI'] },
+  { id: 'DEV04', code: 'DEV04', name: 'Usman Tariq', email: 'usman@novaworks.example', role: 'DEVELOPER', specialization: 'App Developer', skills: ['Flutter', 'Integration', 'Testing'] },
+  { id: 'DEV05', code: 'DEV05', name: 'Zain Abbas', email: 'zain@novaworks.example', role: 'DEVELOPER', specialization: 'AI Developer', skills: ['LLMs', 'Extraction', 'Prompts'] },
+  { id: 'DEV06', code: 'DEV06', name: 'Maryam Asif', email: 'maryam@novaworks.example', role: 'DEVELOPER', specialization: 'AI Developer', skills: ['Retrieval', 'Document processing'] },
 ]
 const PASSWORD = 'Demo123!'
 
 const REFERENCE_DRAFT: Draft = {
   projects: [
     {
-      name: 'UrbanCart Website', clientName: 'UrbanCart Clothing', managerId: 'PM01', deadline: '2026-10-20',
+      name: 'UrbanCart Website', clientName: 'UrbanCart Clothing', managerCode: 'PM01', deadline: '2026-10-20',
       description: 'Responsive website to browse products, view product details and add items to a demo cart. No real checkout, payments or inventory integration in this phase.',
       tasks: [
-        { title: 'Product catalog UI', description: 'Product listing, product detail screen and responsive layout.', assigneeId: 'DEV01', deadline: '2026-10-12', estimatedHours: 12 },
-        { title: 'Demo cart UI', description: 'Add and remove items, quantities and a visible total.', assigneeId: 'DEV01', deadline: '2026-10-15', estimatedHours: 8 },
-        { title: 'Product and cart APIs', description: 'Product data responses and demo cart endpoints, no payment processing.', assigneeId: 'DEV02', deadline: '2026-10-14', estimatedHours: 14 },
-        { title: 'Website integration and testing', description: 'Connect the screens to the APIs and check the demo flow.', assigneeId: 'DEV01', deadline: '2026-10-19', estimatedHours: 6 },
+        { title: 'Product catalog UI', description: 'Product listing, product detail screen and responsive layout.', assigneeCode: 'DEV01', deadline: '2026-10-12', estimatedHours: 12 },
+        { title: 'Demo cart UI', description: 'Add and remove items, quantities and a visible total.', assigneeCode: 'DEV01', deadline: '2026-10-15', estimatedHours: 8 },
+        { title: 'Product and cart APIs', description: 'Product data responses and demo cart endpoints, no payment processing.', assigneeCode: 'DEV02', deadline: '2026-10-14', estimatedHours: 14 },
+        { title: 'Website integration and testing', description: 'Connect the screens to the APIs and check the demo flow.', assigneeCode: 'DEV01', deadline: '2026-10-19', estimatedHours: 6 },
       ],
     },
     {
-      name: 'QuickServe Mobile App', clientName: 'QuickServe Services', managerId: 'PM02', deadline: '2026-10-24',
+      name: 'QuickServe Mobile App', clientName: 'QuickServe Services', managerCode: 'PM02', deadline: '2026-10-24',
       description: 'Flutter customer app for signing in, requesting a service and seeing request status. No maps, driver tracking or payments.',
       tasks: [
-        { title: 'Login and profile screens', description: 'Customer login interface and a basic profile screen.', assigneeId: 'DEV03', deadline: '2026-10-12', estimatedHours: 8 },
-        { title: 'Service booking screens', description: 'Select a service, enter request details and see a confirmation screen.', assigneeId: 'DEV03', deadline: '2026-10-17', estimatedHours: 12 },
-        { title: 'Booking and account APIs', description: 'Basic customer account handling, service requests and request status.', assigneeId: 'DEV02', deadline: '2026-10-16', estimatedHours: 16 },
-        { title: 'Mobile integration and testing', description: 'Connect mobile UI to the API, show request status and test the full customer flow.', assigneeId: 'DEV04', deadline: '2026-10-22', estimatedHours: 10 },
+        { title: 'Login and profile screens', description: 'Customer login interface and a basic profile screen.', assigneeCode: 'DEV03', deadline: '2026-10-12', estimatedHours: 8 },
+        { title: 'Service booking screens', description: 'Select a service, enter request details and see a confirmation screen.', assigneeCode: 'DEV03', deadline: '2026-10-17', estimatedHours: 12 },
+        { title: 'Booking and account APIs', description: 'Basic customer account handling, service requests and request status.', assigneeCode: 'DEV02', deadline: '2026-10-16', estimatedHours: 16 },
+        { title: 'Mobile integration and testing', description: 'Connect mobile UI to the API, show request status and test the full customer flow.', assigneeCode: 'DEV04', deadline: '2026-10-22', estimatedHours: 10 },
       ],
     },
     {
-      name: 'HelpDeskPro AI Assistant', clientName: 'HelpDeskPro Solutions', managerId: 'PM03', deadline: '2026-10-22',
+      name: 'HelpDeskPro AI Assistant', clientName: 'HelpDeskPro Solutions', managerCode: 'PM03', deadline: '2026-10-22',
       description: 'Support assistant that answers from a supplied FAQ and saves unresolved questions for human review. No external messaging.',
       tasks: [
-        { title: 'FAQ document processing', description: 'Prepare the supplied FAQ and retrieve relevant content.', assigneeId: 'DEV06', deadline: '2026-10-13', estimatedHours: 10 },
-        { title: 'Assistant answer generation', description: 'Use prepared content, connect the model and handle the response structure; say when it cannot resolve a question.', assigneeId: 'DEV05', deadline: '2026-10-17', estimatedHours: 14 },
-        { title: 'Human escalation flow', description: 'Save unresolved questions so a person can review them.', assigneeId: 'DEV05', deadline: '2026-10-18', estimatedHours: 6 },
-        { title: 'Assistant evaluation and testing', description: 'Test normal questions, missing-answer cases and the escalation path.', assigneeId: 'DEV06', deadline: '2026-10-21', estimatedHours: 8 },
+        { title: 'FAQ document processing', description: 'Prepare the supplied FAQ and retrieve relevant content.', assigneeCode: 'DEV06', deadline: '2026-10-13', estimatedHours: 10 },
+        { title: 'Assistant answer generation', description: 'Use prepared content, connect the model and handle the response structure; say when it cannot resolve a question.', assigneeCode: 'DEV05', deadline: '2026-10-17', estimatedHours: 14 },
+        { title: 'Human escalation flow', description: 'Save unresolved questions so a person can review them.', assigneeCode: 'DEV05', deadline: '2026-10-18', estimatedHours: 6 },
+        { title: 'Assistant evaluation and testing', description: 'Test normal questions, missing-answer cases and the escalation path.', assigneeCode: 'DEV06', deadline: '2026-10-21', estimatedHours: 8 },
       ],
     },
   ],
@@ -75,6 +76,7 @@ interface StoredTask {
   assigneeId: string
   deadline: string
   estimatedHours: number
+  status: Task['status']
 }
 interface Db {
   projects: StoredProject[]
@@ -109,10 +111,17 @@ const json = (status: number, body?: unknown) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+// Backend error envelope: { error: { code, message, details? }, ...extra }
+const fail = (status: number, code: string, message: string, extra: Record<string, unknown> = {}) =>
+  json(status, { error: { code, message, ...(extra.details !== undefined && { details: extra.details }) }, ...(extra.draft !== undefined && { draft: extra.draft }) })
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const uid = () => Math.random().toString(36).slice(2, 10)
-const ref = (id: string) => ({ id, name: USERS.find((u) => u.id === id)?.name ?? id })
+const ref = (id: string) => {
+  const u = USERS.find((x) => x.id === id)
+  return { id, code: u?.code ?? id, name: u?.name ?? id }
+}
+const byCode = (code: string | null) => USERS.find((u) => u.code.toLowerCase() === String(code ?? '').toLowerCase())
 const isDate = (s: unknown) =>
   typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s))
 
@@ -123,20 +132,26 @@ function visibleProjects(db: Db, me: User): StoredProject[] {
   return db.projects.filter((p) => ids.has(p.id))
 }
 
-function visibleTasks(db: Db, me: User, projectId: string): StoredTask[] {
-  const tasks = db.tasks.filter((t) => t.projectId === projectId)
-  return me.role === 'AGENT' ? tasks.filter((t) => t.assigneeId === me.id) : tasks
+function visibleTasks(db: Db, me: User, projectId?: string): StoredTask[] {
+  const scoped = visibleProjects(db, me).map((p) => p.id)
+  const tasks = db.tasks.filter((t) => scoped.includes(t.projectId) && (!projectId || t.projectId === projectId))
+  return me.role === 'DEVELOPER' ? tasks.filter((t) => t.assigneeId === me.id) : tasks
 }
 
-const toTask = (t: StoredTask): Task => ({
-  id: t.id,
-  projectId: t.projectId,
-  title: t.title,
-  description: t.description,
-  assignee: ref(t.assigneeId),
-  deadline: t.deadline,
-  estimatedHours: t.estimatedHours,
-})
+function toTask(db: Db, t: StoredTask): Task {
+  const p = db.projects.find((x) => x.id === t.projectId)!
+  return {
+    id: t.id,
+    projectId: t.projectId,
+    project: { id: p.id, name: p.name, clientName: p.clientName },
+    title: t.title,
+    description: t.description,
+    assignee: ref(t.assigneeId),
+    deadline: t.deadline,
+    estimatedHours: t.estimatedHours,
+    status: t.status,
+  }
+}
 
 function toSummary(db: Db, me: User, p: StoredProject): ProjectSummary {
   const tasks = visibleTasks(db, me, p.id)
@@ -146,36 +161,80 @@ function toSummary(db: Db, me: User, p: StoredProject): ProjectSummary {
     clientName: p.clientName,
     description: p.description,
     manager: ref(p.managerId),
+    members: [...new Set(tasks.map((t) => t.assigneeId))].sort().map(ref),
     deadline: p.deadline,
     taskCount: tasks.length,
-    totalHours: tasks.reduce((s, t) => s + t.estimatedHours, 0),
+    totalEstimatedHours: tasks.reduce((s, t) => s + t.estimatedHours, 0),
   }
 }
 
+const toDetail = (db: Db, me: User, p: StoredProject) => ({
+  ...toSummary(db, me, p),
+  tasks: visibleTasks(db, me, p.id).map((t) => toTask(db, t)),
+})
+
+// Same rules and dot paths as the backend (e.g. "projects.0.tasks.2.assigneeCode").
 function validate(draft: Draft): DraftIssue[] {
   const issues: DraftIssue[] = []
-  if (!draft?.projects?.length) return [{ path: 'projects', message: 'No projects found in the transcript.' }]
+  if (!draft?.projects?.length) return [{ path: 'projects', message: 'No projects were found in the transcript' }]
   draft.projects.forEach((p, i) => {
-    const at = `projects[${i}]`
-    if (!p.name?.trim()) issues.push({ path: `${at}.name`, message: 'Project name is required.' })
-    if (!p.clientName?.trim()) issues.push({ path: `${at}.clientName`, message: 'Client name is required.' })
-    if (USERS.find((u) => u.id === p.managerId)?.role !== 'MANAGER')
-      issues.push({ path: `${at}.managerId`, message: `"${p.managerId || '(empty)'}" is not an existing manager.` })
+    const at = `projects.${i}`
+    if (!p.name?.trim()) issues.push({ path: `${at}.name`, message: 'Project name is missing.' })
+    if (!p.clientName?.trim()) issues.push({ path: `${at}.clientName`, message: 'Client name is missing.' })
+    if (byCode(p.managerCode)?.role !== 'MANAGER')
+      issues.push({ path: `${at}.managerCode`, message: `"${p.managerCode || '(empty)'}" is not a manager in the team directory.` })
     if (!isDate(p.deadline)) issues.push({ path: `${at}.deadline`, message: 'Project deadline must be a valid date.' })
-    if (!p.tasks?.length) issues.push({ path: `${at}.tasks`, message: 'Project has no tasks.' })
     p.tasks?.forEach((t, j) => {
-      const tat = `${at}.tasks[${j}]`
-      if (!t.title?.trim()) issues.push({ path: `${tat}.title`, message: 'Task title is required.' })
-      if (USERS.find((u) => u.id === t.assigneeId)?.role !== 'AGENT')
-        issues.push({ path: `${tat}.assigneeId`, message: `"${t.assigneeId || '(empty)'}" is not an existing agent.` })
+      const tat = `${at}.tasks.${j}`
+      if (!t.title?.trim()) issues.push({ path: `${tat}.title`, message: 'Task title is missing.' })
+      if (byCode(t.assigneeCode)?.role !== 'DEVELOPER')
+        issues.push({ path: `${tat}.assigneeCode`, message: `"${t.assigneeCode || '(empty)'}" is not a developer in the team directory.` })
       if (!(Number(t.estimatedHours) > 0))
-        issues.push({ path: `${tat}.estimatedHours`, message: 'Estimated hours must be a positive number.' })
+        issues.push({ path: `${tat}.estimatedHours`, message: 'Estimated hours must be greater than 0.' })
       if (!isDate(t.deadline)) issues.push({ path: `${tat}.deadline`, message: 'Task deadline must be a valid date.' })
-      else if (isDate(p.deadline) && t.deadline > p.deadline)
+      else if (isDate(p.deadline) && t.deadline! > p.deadline!)
         issues.push({ path: `${tat}.deadline`, message: 'Task deadline is after the project deadline.' })
     })
   })
   return issues
+}
+
+function saveDraft(db: Db, me: User, draft: Draft) {
+  const created: StoredProject[] = []
+  for (const p of draft.projects) {
+    const project: StoredProject = {
+      id: uid(),
+      name: p.name!.trim(),
+      clientName: p.clientName!.trim(),
+      description: p.description ?? '',
+      managerId: byCode(p.managerCode)!.id,
+      deadline: p.deadline!,
+    }
+    created.push(project)
+    db.projects.push(project)
+    for (const t of p.tasks)
+      db.tasks.push({
+        id: uid(),
+        projectId: project.id,
+        title: t.title!.trim(),
+        description: t.description ?? '',
+        assigneeId: byCode(t.assigneeCode)!.id,
+        deadline: t.deadline!,
+        estimatedHours: Number(t.estimatedHours),
+        status: 'TODO',
+      })
+  }
+  save(db)
+  const projects = created.map((p) => toDetail(db, me, p))
+  return {
+    transcriptId: uid(),
+    totals: {
+      projects: projects.length,
+      tasks: projects.reduce((s, p) => s + p.taskCount, 0),
+      estimatedHours: projects.reduce((s, p) => s + p.totalEstimatedHours, 0),
+    },
+    projects,
+  }
 }
 
 export async function mockFetch(path: string, init: RequestInit): Promise<Response> {
@@ -185,93 +244,55 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
   const auth = new Headers(init.headers).get('Authorization') ?? ''
   const me = USERS.find((u) => `Bearer mock-${u.id}` === auth)
   const db = load()
+  const [route] = path.split('?')
 
-  if (method === 'POST' && path === '/auth/login') {
+  if (method === 'POST' && route === '/auth/login') {
     const user = USERS.find((u) => u.email.toLowerCase() === String(body.email ?? '').trim().toLowerCase())
-    if (!user || body.password !== PASSWORD) return json(401, { error: 'Invalid email or password.' })
+    if (!user || body.password !== PASSWORD) return fail(401, 'INVALID_CREDENTIALS', 'Invalid email or password')
     return json(200, { token: `mock-${user.id}`, user })
   }
 
-  if (!me) return json(401, { error: 'Please log in.' })
+  if (!me) return fail(401, 'UNAUTHORIZED', 'Authentication required')
 
-  if (method === 'GET' && path === '/auth/me') return json(200, me)
-  if (method === 'POST' && path === '/auth/logout') return json(204)
-  if (method === 'GET' && path === '/users') return json(200, USERS)
+  if (method === 'GET' && route === '/auth/me') return json(200, { user: me })
+  if (method === 'POST' && route === '/auth/logout') return json(204)
+  if (method === 'GET' && route === '/users') return json(200, { users: USERS })
 
-  if (method === 'GET' && path === '/projects')
-    return json(200, visibleProjects(db, me).map((p) => toSummary(db, me, p)))
+  if (method === 'GET' && route === '/projects')
+    return json(200, { projects: visibleProjects(db, me).map((p) => toSummary(db, me, p)) })
 
-  const projectMatch = path.match(/^\/projects\/([^/]+)$/)
+  const projectMatch = route.match(/^\/projects\/([^/]+)$/)
   if (method === 'GET' && projectMatch) {
     const id = decodeURIComponent(projectMatch[1])
     const p = visibleProjects(db, me).find((x) => x.id === id)
-    if (!p) return json(404, { error: 'Project not found.' })
-    return json(200, { ...toSummary(db, me, p), tasks: visibleTasks(db, me, p.id).map(toTask) })
+    if (!p) return fail(404, 'NOT_FOUND', 'Project not found')
+    return json(200, { project: toDetail(db, me, p) })
   }
 
-  if (method === 'GET' && path === '/tasks/mine') {
-    if (me.role !== 'AGENT') return json(403, { error: 'Only agents have assigned tasks.' })
-    const mine = db.tasks
-      .filter((t) => t.assigneeId === me.id)
-      .map((t) => {
-        const p = db.projects.find((x) => x.id === t.projectId)!
-        return {
-          ...toTask(t),
-          project: { id: p.id, name: p.name, clientName: p.clientName, deadline: p.deadline, manager: ref(p.managerId) },
-        }
-      })
-    return json(200, mine)
-  }
+  if (method === 'GET' && route === '/tasks')
+    return json(200, { tasks: visibleTasks(db, me).map((t) => toTask(db, t)) })
 
-  if (method === 'POST' && path === '/transcripts') {
-    if (me.role !== 'ADMIN') return json(403, { error: 'Only the admin can create projects from a transcript.' })
+  if (method === 'POST' && (route === '/transcripts' || route === '/transcripts/commit')) {
+    if (me.role !== 'ADMIN') return fail(403, 'FORBIDDEN', 'This action requires role: ADMIN')
+    const transcript = String(body.transcript ?? '').trim()
+    if (transcript.length < 20) return fail(400, 'VALIDATION_ERROR', 'Request validation failed', { details: [{ path: 'transcript', message: 'Transcript is empty or too short' }] })
+
     let draft: Draft
-    if (body.draft) {
+    if (route === '/transcripts/commit') {
       draft = body.draft
     } else {
-      const transcript = String(body.transcript ?? '').trim()
-      if (!transcript) return json(400, { error: 'Please paste a meeting transcript.' })
       await delay(1500) // pretend the AI is thinking
       draft = structuredClone(REFERENCE_DRAFT)
       if (/INVALID/.test(transcript)) {
-        draft.projects[0].managerId = 'Kamran'
+        draft.projects[0].managerCode = 'Kamran'
         draft.projects[1].tasks[3].deadline = '2026-10-30'
       }
     }
     const issues = validate(draft)
-    if (issues.length) return json(422, { error: 'Some details could not be resolved. Nothing was saved.', draft, issues })
-
-    const created: StoredProject[] = []
-    for (const p of draft.projects) {
-      const project: StoredProject = {
-        id: uid(),
-        name: p.name.trim(),
-        clientName: p.clientName.trim(),
-        description: p.description ?? '',
-        managerId: p.managerId,
-        deadline: p.deadline,
-      }
-      created.push(project)
-      db.projects.push(project)
-      for (const t of p.tasks)
-        db.tasks.push({
-          id: uid(),
-          projectId: project.id,
-          title: t.title.trim(),
-          description: t.description ?? '',
-          assigneeId: t.assigneeId,
-          deadline: t.deadline,
-          estimatedHours: Number(t.estimatedHours),
-        })
-    }
-    save(db)
-    const summaries = created.map((p) => toSummary(db, me, p))
-    return json(201, {
-      projects: summaries,
-      projectCount: summaries.length,
-      taskCount: summaries.reduce((s, p) => s + p.taskCount, 0),
-    })
+    if (issues.length)
+      return fail(422, 'DRAFT_INVALID', 'Some required information could not be resolved. Correct the draft and save again. Nothing was saved.', { details: issues, draft })
+    return json(201, saveDraft(db, me, draft))
   }
 
-  return json(404, { error: `No mock route for ${method} ${path}` })
+  return fail(404, 'NOT_FOUND', `No mock route for ${method} ${route}`)
 }

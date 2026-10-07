@@ -81,7 +81,7 @@ export default function ProjectDetail() {
             <dd className="font-medium text-ink">{formatDate(p.deadline)}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">{user?.role === 'AGENT' ? 'Your tasks' : 'Tasks'}</dt>
+            <dt className="text-slate-500">{user?.role === 'DEVELOPER' ? 'Your tasks' : 'Tasks'}</dt>
             <dd className="font-medium text-ink">
               {p.tasks.length} · {p.tasks.reduce((s, t) => s + t.estimatedHours, 0)}h
             </dd>
@@ -89,7 +89,7 @@ export default function ProjectDetail() {
         </dl>
       </div>
       <h2 className="mb-3 text-lg font-semibold text-ink">
-        {user?.role === 'AGENT' ? 'Your tasks in this project' : 'Tasks'}
+        {user?.role === 'DEVELOPER' ? 'Your tasks in this project' : 'Tasks'}
       </h2>
       {p.tasks.length ? <TaskTable tasks={p.tasks} /> : <p className="text-slate-500">No tasks.</p>}
     </>
