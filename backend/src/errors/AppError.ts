@@ -1,5 +1,5 @@
 // Errors thrown anywhere in the app are converted by middleware/errorHandler.ts into
-// { error: { code, message, details? } } with the matching HTTP status.
+// { error: { code, message, details? }, ...extra } with the matching HTTP status.
 
 export class AppError extends Error {
   constructor(
@@ -7,6 +7,8 @@ export class AppError extends Error {
     public readonly code: string,
     message: string,
     public readonly details?: unknown,
+    // Extra top-level response fields (e.g. the AI draft returned alongside a 422).
+    public readonly extra?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'AppError';

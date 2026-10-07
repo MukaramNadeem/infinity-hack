@@ -3,6 +3,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { projectsRouter } from './modules/projects/projects.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
+import { transcriptsRouter } from './modules/transcripts/transcripts.routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // App factory, kept separate from server.ts so Supertest can use it without opening a port.
@@ -20,6 +21,7 @@ export function createApp() {
   app.use('/api/users', usersRouter);
   app.use('/api/projects', projectsRouter);
   app.use('/api/tasks', tasksRouter);
+  app.use('/api/transcripts', transcriptsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
