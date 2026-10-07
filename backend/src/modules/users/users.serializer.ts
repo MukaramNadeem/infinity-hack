@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 import type { AuthUser, Role } from '../../types/roles';
 
 function parseSkills(raw: string): string[] {
@@ -22,3 +22,15 @@ export function toPublicUser(user: User): AuthUser {
     skills: parseSkills(user.skills),
   };
 }
+
+// Compact user embedded in projects/tasks (manager, assignee, members).
+export const userSummarySelect = {
+  id: true,
+  code: true,
+  name: true,
+  email: true,
+  role: true,
+  specialization: true,
+} satisfies Prisma.UserSelect;
+
+export type UserSummary = Prisma.UserGetPayload<{ select: typeof userSummarySelect }>;
