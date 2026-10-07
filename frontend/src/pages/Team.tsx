@@ -2,7 +2,7 @@ import { api } from '../api/client'
 import { ErrorBox, PageHeader, RoleBadge, Spinner, useLoad } from '../components/ui'
 import type { Role } from '../types'
 
-const ORDER: Role[] = ['ADMIN', 'MANAGER', 'AGENT']
+const ORDER: Role[] = ['ADMIN', 'MANAGER', 'DEVELOPER']
 
 export default function Team() {
   const { data, error, loading } = useLoad(api.users)

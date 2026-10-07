@@ -1,5 +1,21 @@
 # API Contract (frontend ⇄ backend)
 
+> **Superseded — the frontend now follows the real backend.** The source of truth is the backend's OpenAPI spec:
+> `backend/docs/openapi.yaml`, browsable at `http://localhost:4000/api/docs`. `frontend/src/types.ts` and
+> `frontend/src/api/client.ts` were updated to it. Differences from the draft below:
+>
+> - Role `AGENT` is `DEVELOPER`. Users also have a `code` (`ADMIN`, `PM01`…`DEV06`); `id` is a generated id.
+> - Responses are wrapped: `{ user }`, `{ users }`, `{ projects }`, `{ project }`, `{ tasks }`.
+> - `totalHours` is `totalEstimatedHours`; projects also have `members`; tasks also have `project` and `status`.
+> - "My tasks" is `GET /api/tasks` (role-filtered on the server); there is no `/tasks/mine`.
+> - Errors are `{ "error": { "code", "message", "details"? } }`.
+> - Drafts reference people by code: `managerCode` / `assigneeCode` (fields may be `null`).
+>   A 422 returns `{ error: { code: "DRAFT_INVALID", message, details: [{ path, message }] }, draft }` with dot paths
+>   such as `projects.2.tasks.1.assigneeCode`. A corrected draft goes to `POST /api/transcripts/commit` as `{ transcript, draft }`.
+> - The transcript result is `{ transcriptId, totals: { projects, tasks, estimatedHours }, projects }`.
+>
+> The original draft contract is kept below for reference.
+
 Agreed shape between the frontend and backend. If the backend needs to change anything here, tell the frontend first.
 
 ## Basics

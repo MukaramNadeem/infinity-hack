@@ -21,7 +21,7 @@ function RequireAuth({ children, roles }: { children: ReactNode; roles?: Role[] 
 
 function Home() {
   const { user } = useAuth()
-  return <Navigate to={user?.role === 'AGENT' ? '/my-tasks' : '/projects'} replace />
+  return <Navigate to={user?.role === 'DEVELOPER' ? '/my-tasks' : '/projects'} replace />
 }
 
 export default function App() {
@@ -41,7 +41,7 @@ export default function App() {
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
             <Route path="team" element={<Team />} />
-            <Route path="my-tasks" element={<RequireAuth roles={['AGENT']}><MyTasks /></RequireAuth>} />
+            <Route path="my-tasks" element={<RequireAuth roles={['DEVELOPER']}><MyTasks /></RequireAuth>} />
             <Route path="transcript" element={<RequireAuth roles={['ADMIN']}><CreateFromTranscript /></RequireAuth>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
