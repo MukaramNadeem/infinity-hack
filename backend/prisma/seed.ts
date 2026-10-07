@@ -1,9 +1,12 @@
 // Seeds the ten demo users. Idempotent: upserts by unique email, so re-running
 // never duplicates users (it refreshes their profile and password hash instead).
 
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { DEMO_PASSWORD, DEMO_USERS } from './demoUsers';
+
+dotenv.config({ quiet: true }); // also works when run directly (`npx tsx prisma/seed.ts`)
 
 const prisma = new PrismaClient();
 

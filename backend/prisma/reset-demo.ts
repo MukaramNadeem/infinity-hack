@@ -1,7 +1,10 @@
 // Deletes all generated projects, tasks and transcripts while keeping seeded users.
 // Use between transcript demo runs: `npm run db:reset-demo`.
 
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+dotenv.config({ quiet: true }); // standalone script: load DATABASE_URL from .env
 
 const prisma = new PrismaClient();
 

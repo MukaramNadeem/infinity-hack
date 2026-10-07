@@ -1,0 +1,1095 @@
+openapi: 3.0.3
+info:
+  title: NovaWorks PM CRM API
+  version: 1.0.0
+  description: |
+    Backend for the NovaWorks Technologies project-management CRM.
+
+    **Authentication.** `POST /auth/login` returns a JWT. Send it on every other request as
+    `Authorization: Bearer <token>`. Users are pre-seeded (no signup); every demo account's password is `Demo123!`.
+
+    **Roles and visibility** (enforced on every request, not only in the UI):
+
+    | Role | Projects | Tasks |
+    |---|---|---|
+    | ADMIN | all | all |
+    | MANAGER | projects they manage | all tasks in those projects |
+    | DEVELOPER | projects containing at least one of their tasks | only tasks assigned to them |
+
+    A project or task outside the caller's scope returns **404** (not 403), so its existence is not revealed.
+    For developers, a project's `taskCount`, `totalEstimatedHours`, `members` and `tasks` only cover their own tasks.
+
+    **Dates** are calendar dates exchanged as `YYYY-MM-DD`.
+
+    **Errors** always use the envelope `{ "error": { "code", "message", "details"? } }`.
+    Validation errors (`400 VALIDATION_ERROR`) list every problem as `details: [{ path, message }]`.
+
+    **Create from Transcript.** The admin posts a meeting transcript; the AI extracts projects and tasks using the
+    team directory, the server validates everything, and saves it in one transaction (all or nothing).
+    If something can't be resolved (unknown person, missing date, …) the response is `422 DRAFT_INVALID` with the
+    draft and a list of issues: show them, let the admin fix the draft, then send it to `POST /transcripts/commit`.
+# Shared example values, reused below with YAML aliases (*Name). Ignored by OpenAPI tools (x- extension).
+x-examples:
+  UserAli: &UserAli { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack, skills: [React, Frontend integration] }
+  ManagerAyesha: &ManagerAyesha { id: cmuxri7a10001wp08m3c2f9kq, code: PM01, name: Ayesha Khan, email: ayesha@novaworks.example, role: MANAGER, specialization: Web PM }
+  DevAli: &DevAli { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+  DevHamza: &DevHamza { id: cmuxri7ar0005wp08b5v2k8hd, code: DEV02, name: Hamza Shah, email: hamza@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+  TaskCatalog: &TaskCatalog
+      id: cmuxs0p3a0002wp0gq9w1e6lm
+      projectId: cmuxs0p2k0001wp0g4h7tq2ab
+      project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+      title: Product catalog UI
+      description: Product listing, product detail screen and responsive layout.
+      assignee: { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+      deadline: '2026-10-12'
+      estimatedHours: 12
+      status: TODO
+      createdAt: '2026-10-07T10:05:12.000Z'
+      updatedAt: '2026-10-07T10:05:12.000Z'
+  TaskDemoCart: &TaskDemoCart
+      id: cmuxs0p3k0003wp0gz7r4b1cs
+      projectId: cmuxs0p2k0001wp0g4h7tq2ab
+      project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+      title: Demo cart UI
+      description: Add and remove items, quantities and a visible total in the demo cart.
+      assignee: { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+      deadline: '2026-10-15'
+      estimatedHours: 8
+      status: TODO
+      createdAt: '2026-10-07T10:05:12.000Z'
+      updatedAt: '2026-10-07T10:05:12.000Z'
+  ProjectDetailUrbanCart: &ProjectDetailUrbanCart
+      id: cmuxs0p2k0001wp0g4h7tq2ab
+      name: UrbanCart Website
+      clientName: UrbanCart Clothing
+      description: Responsive website where customers browse products, view details and add items to a demo cart. No real checkout, payment gateway or stock integration in this phase.
+      deadline: '2026-10-20'
+      manager: { id: cmuxri7a10001wp08m3c2f9kq, code: PM01, name: Ayesha Khan, email: ayesha@novaworks.example, role: MANAGER, specialization: Web PM }
+      members:
+        - { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+        - { id: cmuxri7ar0005wp08b5v2k8hd, code: DEV02, name: Hamza Shah, email: hamza@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+      taskCount: 4
+      totalEstimatedHours: 40
+      transcriptId: cmuxs0p1x0000wp0g8a3h5c2d
+      createdAt: '2026-10-07T10:05:12.000Z'
+      updatedAt: '2026-10-07T10:05:12.000Z'
+      tasks:
+        - id: cmuxs0p3a0002wp0gq9w1e6lm
+          projectId: cmuxs0p2k0001wp0g4h7tq2ab
+          project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+          title: Product catalog UI
+          description: Product listing, product detail screen and responsive layout.
+          assignee: { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+          deadline: '2026-10-12'
+          estimatedHours: 12
+          status: TODO
+          createdAt: '2026-10-07T10:05:12.000Z'
+          updatedAt: '2026-10-07T10:05:12.000Z'
+        - id: cmuxs0p3t0004wp0g6c1n9q3e
+          projectId: cmuxs0p2k0001wp0g4h7tq2ab
+          project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+          title: Product and cart APIs
+          description: Product data responses and demo cart endpoints, without payment processing.
+          assignee: { id: cmuxri7ar0005wp08b5v2k8hd, code: DEV02, name: Hamza Shah, email: hamza@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+          deadline: '2026-10-14'
+          estimatedHours: 14
+          status: TODO
+          createdAt: '2026-10-07T10:05:12.000Z'
+          updatedAt: '2026-10-07T10:05:12.000Z'
+  TranscriptResult: &TranscriptResult
+      transcriptId: cmuxs0p1x0000wp0g8a3h5c2d
+      totals: { projects: 3, tasks: 12, estimatedHours: 124 }
+      projects:
+        - id: cmuxs0p2k0001wp0g4h7tq2ab
+          name: UrbanCart Website
+          clientName: UrbanCart Clothing
+          description: Responsive website with a demo cart. No real checkout, payment gateway or stock integration in this phase.
+          deadline: '2026-10-20'
+          manager: { id: cmuxri7a10001wp08m3c2f9kq, code: PM01, name: Ayesha Khan, email: ayesha@novaworks.example, role: MANAGER, specialization: Web PM }
+          members:
+            - { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+            - { id: cmuxri7ar0005wp08b5v2k8hd, code: DEV02, name: Hamza Shah, email: hamza@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+          taskCount: 4
+          totalEstimatedHours: 40
+          transcriptId: cmuxs0p1x0000wp0g8a3h5c2d
+          createdAt: '2026-10-07T10:05:12.000Z'
+          updatedAt: '2026-10-07T10:05:12.000Z'
+          tasks:
+            - id: cmuxs0p3a0002wp0gq9w1e6lm
+              projectId: cmuxs0p2k0001wp0g4h7tq2ab
+              project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+              title: Product catalog UI
+              description: Product listing, product detail screen and responsive layout.
+              assignee: { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack }
+              deadline: '2026-10-12'
+              estimatedHours: 12
+              status: TODO
+              createdAt: '2026-10-07T10:05:12.000Z'
+              updatedAt: '2026-10-07T10:05:12.000Z'
+  DraftWithKamran: &DraftWithKamran
+      projects:
+        - name: HelpDeskPro AI Assistant
+          clientName: HelpDeskPro Solutions
+          description: Support assistant answering from the supplied FAQ; unresolved questions saved for human review. No external messaging.
+          managerCode: PM03
+          deadline: '2026-10-22'
+          tasks:
+            - { title: FAQ document processing, description: Prepare the FAQ and retrieve relevant content., assigneeCode: DEV06, deadline: '2026-10-13', estimatedHours: 10 }
+            - { title: Human escalation flow, description: Save unresolved questions for review by a person., assigneeCode: Kamran, deadline: '2026-10-18', estimatedHours: 6 }
+  DraftCorrected: &DraftCorrected
+      projects:
+        - name: HelpDeskPro AI Assistant
+          clientName: HelpDeskPro Solutions
+          description: Support assistant answering from the supplied FAQ; unresolved questions saved for human review. No external messaging.
+          managerCode: PM03
+          deadline: '2026-10-22'
+          tasks:
+            - { title: FAQ document processing, description: Prepare the FAQ and retrieve relevant content., assigneeCode: DEV06, deadline: '2026-10-13', estimatedHours: 10 }
+            - { title: Human escalation flow, description: Save unresolved questions for review by a person., assigneeCode: DEV05, deadline: '2026-10-18', estimatedHours: 6 }
+
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Auth
+  - name: Team directory
+  - name: Projects
+  - name: Tasks
+  - name: Transcripts
+    description: Meeting transcript → projects and tasks (ADMIN only).
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      security: []
+      responses:
+        '200':
+          description: The API is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+              example: { status: ok }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with a demo account
+      description: Email is case-insensitive. Unknown email and wrong password return the same error.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginInput' }
+            example: { email: ali@novaworks.example, password: Demo123! }
+      responses:
+        '200':
+          description: Logged in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResult' }
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXV4cmk3YWowMDA0d3AwODd3NjF1cmJrIiwicm9sZSI6IkRFVkVMT1BFUiJ9.signature
+                user: *UserAli
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Wrong email or password.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: INVALID_CREDENTIALS, message: Invalid email or password } }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: The logged-in user
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+              example:
+                user:
+                  id: cmuxri7aj0004wp087w61urbk
+                  code: DEV01
+                  name: Ali Raza
+                  email: ali@novaworks.example
+                  role: DEVELOPER
+                  specialization: Full-Stack
+                  skills: [React, Frontend integration]
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: Tokens are stateless; the client deletes its token. Returns 204.
+      responses:
+        '204': { description: Logged out. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /users:
+    get:
+      tags: [Team directory]
+      summary: Team directory
+      description: Read-only, available to every role. Ordered ADMIN, managers, developers. Never contains password data.
+      parameters:
+        - name: role
+          in: query
+          schema: { $ref: '#/components/schemas/Role' }
+          example: MANAGER
+      responses:
+        '200':
+          description: Users.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+              example:
+                users:
+                  - { id: cmuxri79o0000wp08kx3iju70, code: ADMIN, name: Admin, email: admin@novaworks.example, role: ADMIN, specialization: Administrator, skills: [Company overview, Transcript creation] }
+                  - { id: cmuxri7a10001wp08m3c2f9kq, code: PM01, name: Ayesha Khan, email: ayesha@novaworks.example, role: MANAGER, specialization: Web PM, skills: [Web projects, Client coordination] }
+                  - { id: cmuxri7aj0004wp087w61urbk, code: DEV01, name: Ali Raza, email: ali@novaworks.example, role: DEVELOPER, specialization: Full-Stack, skills: [React, Frontend integration] }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /users/{id}:
+    get:
+      tags: [Team directory]
+      summary: One user
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+              example:
+                user: { id: cmuxri7b20006wp08w0zd5n1e, code: DEV03, name: Sara Noor, email: sara@novaworks.example, role: DEVELOPER, specialization: App Developer, skills: [Flutter, Mobile UI] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Projects visible to the caller
+      description: ADMIN sees all, MANAGER the projects they manage, DEVELOPER projects containing their tasks. Sorted by deadline.
+      responses:
+        '200':
+          description: Projects (without the task list; use GET /projects/{id} for tasks).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProjectSummary' }
+              example:
+                projects:
+                  - id: cmuxs0p2k0001wp0g4h7tq2ab
+                    name: UrbanCart Website
+                    clientName: UrbanCart Clothing
+                    description: Responsive website where customers browse products, view details and add items to a demo cart. No real checkout, payment gateway or stock integration in this phase.
+                    deadline: '2026-10-20'
+                    manager: *ManagerAyesha
+                    members:
+                      - *DevAli
+                      - *DevHamza
+                    taskCount: 4
+                    totalEstimatedHours: 40
+                    transcriptId: cmuxs0p1x0000wp0g8a3h5c2d
+                    createdAt: '2026-10-07T10:05:12.000Z'
+                    updatedAt: '2026-10-07T10:05:12.000Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Projects]
+      summary: Create a project manually (ADMIN)
+      description: Optionally with tasks; saved in one atomic write. `managerId` must be a MANAGER, each `assigneeId` a DEVELOPER, and task deadlines must not be after the project deadline.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectInput' }
+            example:
+              name: UrbanCart Website
+              clientName: UrbanCart Clothing
+              description: Demo store; no payments or inventory.
+              managerId: cmuxri7a10001wp08m3c2f9kq
+              deadline: '2026-10-20'
+              tasks:
+                - { title: Product catalog UI, description: "Product listing, detail screen and responsive layout.", assigneeId: cmuxri7aj0004wp087w61urbk, deadline: '2026-10-12', estimatedHours: 12 }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: { $ref: '#/components/schemas/ProjectDetail' }
+              example:
+                project: *ProjectDetailUrbanCart
+        '400':
+          description: Invalid input or business rule violated (every problem is listed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Request validation failed
+                  details:
+                    - { path: managerId, message: 'Ali Raza is a DEVELOPER, expected a MANAGER' }
+                    - { path: tasks.0.deadline, message: Task deadline 2026-10-25 is after the project deadline 2026-10-20 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /projects/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projects]
+      summary: Project detail with its tasks
+      description: Tasks are filtered by role (a developer only gets their own tasks). 404 if the project is outside the caller's scope.
+      responses:
+        '200':
+          description: The project.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: { $ref: '#/components/schemas/ProjectDetail' }
+              example:
+                project: *ProjectDetailUrbanCart
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Projects]
+      summary: Edit a project (ADMIN, or its MANAGER)
+      description: Send only the fields to change. Only ADMIN may change `managerId`. The deadline can't move before existing task deadlines.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProjectInput' }
+            example: { description: 'Demo store only: browse, product details and demo cart. No payments.', deadline: '2026-10-21' }
+      responses:
+        '200':
+          description: Updated project.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: { $ref: '#/components/schemas/ProjectDetail' }
+              example:
+                project: *ProjectDetailUrbanCart
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Projects]
+      summary: Delete a project and its tasks (ADMIN)
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /projects/{id}/tasks:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projects]
+      summary: Tasks of one project (role-filtered)
+      parameters:
+        - { $ref: '#/components/parameters/StatusFilter' }
+        - { $ref: '#/components/parameters/AssigneeFilter' }
+      responses:
+        '200':
+          description: Tasks, sorted by deadline.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+              example:
+                tasks:
+                  - *TaskCatalog
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Projects]
+      summary: Add a task to a project (ADMIN, or its MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTaskInput' }
+            example: { title: Accessibility pass, description: Keyboard navigation and contrast checks., assigneeId: cmuxri7aj0004wp087w61urbk, deadline: '2026-10-18', estimatedHours: 3 }
+      responses:
+        '201':
+          description: Created task.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task: { $ref: '#/components/schemas/Task' }
+              example:
+                task:
+                  id: cmuxt8b2q0009wp0gk1s4n7vx
+                  projectId: cmuxs0p2k0001wp0g4h7tq2ab
+                  project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+                  title: Accessibility pass
+                  description: Keyboard navigation and contrast checks.
+                  assignee: *DevAli
+                  deadline: '2026-10-18'
+                  estimatedHours: 3
+                  status: TODO
+                  createdAt: '2026-10-07T11:20:00.000Z'
+                  updatedAt: '2026-10-07T11:20:00.000Z'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: Tasks visible to the caller ("My Tasks" for developers)
+      description: Filters can only narrow the caller's scope, never widen it.
+      parameters:
+        - name: projectId
+          in: query
+          schema: { type: string }
+        - { $ref: '#/components/parameters/StatusFilter' }
+        - { $ref: '#/components/parameters/AssigneeFilter' }
+      responses:
+        '200':
+          description: Tasks, sorted by deadline.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+              example:
+                tasks:
+                  - *TaskCatalog
+                  - *TaskDemoCart
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /tasks/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Tasks]
+      summary: One task (role-filtered)
+      responses:
+        '200':
+          description: The task.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task: { $ref: '#/components/schemas/Task' }
+              example:
+                task: *TaskCatalog
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Tasks]
+      summary: Edit a task
+      description: |
+        ADMIN or the project's MANAGER may change any field. The assigned DEVELOPER may change `status` only
+        (any other field → 403). `assigneeId` must be a DEVELOPER; `deadline` must not be after the project deadline.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTaskInput' }
+            examples:
+              developerStatus:
+                summary: Developer updates their status
+                value: { status: IN_PROGRESS }
+              managerEdit:
+                summary: Manager changes estimate and deadline
+                value: { estimatedHours: 14, deadline: '2026-10-13' }
+      responses:
+        '200':
+          description: Updated task.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task: { $ref: '#/components/schemas/Task' }
+              example:
+                task:
+                  id: cmuxs0p3a0002wp0gq9w1e6lm
+                  projectId: cmuxs0p2k0001wp0g4h7tq2ab
+                  project: { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website, clientName: UrbanCart Clothing }
+                  title: Product catalog UI
+                  description: Product listing, product detail screen and responsive layout.
+                  assignee: *DevAli
+                  deadline: '2026-10-12'
+                  estimatedHours: 12
+                  status: IN_PROGRESS
+                  createdAt: '2026-10-07T10:05:12.000Z'
+                  updatedAt: '2026-10-08T09:12:40.000Z'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Not allowed (e.g. a developer changing a field other than status).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: FORBIDDEN, message: Developers can only update the status of their own tasks } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tasks]
+      summary: Delete a task (ADMIN, or the project's MANAGER)
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /transcripts:
+    post:
+      tags: [Transcripts]
+      summary: Create from Transcript (one click)
+      description: |
+        Runs the AI on the transcript, validates the result against the team directory and saves all projects and
+        tasks in one transaction. Takes a few seconds with the real AI: show a loading state and disable the button.
+
+        - `422 DRAFT_INVALID`: nothing saved; response includes `draft` + `error.details` (issues). Let the admin fix the draft, then call `POST /transcripts/commit`.
+        - `409 DUPLICATE_TRANSCRIPT`: this exact transcript was already imported (use `?force=true` to import again).
+        - `409 TRANSCRIPT_IN_PROGRESS`: the same transcript is being processed right now (double click).
+        - `502 AI_UNAVAILABLE` / `AI_INVALID_OUTPUT`, `503 AI_NOT_CONFIGURED`: AI problem; nothing saved.
+      parameters: [{ $ref: '#/components/parameters/Force' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TranscriptInput' }
+            example:
+              transcript: "Meeting: NovaWorks Client Delivery Planning\nDate: 7 October 2026 ...\n09:56-10:00 | Final recap\nAyesha: Final recap: UrbanCart Website, client UrbanCart Clothing, manager Ayesha, deadline 20 October. Ali owns Product catalog UI: 12 hours, 12 October. ..."
+              meetingDate: '2026-10-07'
+      responses:
+        '201':
+          description: Saved. Full details of every created project are returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TranscriptResult' }
+              example: *TranscriptResult
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Duplicate or already in progress.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                error:
+                  code: DUPLICATE_TRANSCRIPT
+                  message: This transcript was already imported. Delete its projects first, or retry with ?force=true to import it again.
+                  details: { transcriptId: cmuxs0p1x0000wp0g8a3h5c2d, importedAt: '2026-10-07T10:05:12.000Z' }
+        '422': { $ref: '#/components/responses/DraftInvalid' }
+        '502': { $ref: '#/components/responses/AiUnavailable' }
+        '503': { $ref: '#/components/responses/AiNotConfigured' }
+    get:
+      tags: [Transcripts]
+      summary: Past imports
+      responses:
+        '200':
+          description: Imports, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcripts:
+                    type: array
+                    items: { $ref: '#/components/schemas/TranscriptSummary' }
+              example:
+                transcripts:
+                  - id: cmuxs0p1x0000wp0g8a3h5c2d
+                    meetingDate: '2026-10-07'
+                    createdAt: '2026-10-07T10:05:12.000Z'
+                    createdBy: { id: cmuxri79o0000wp08kx3iju70, name: Admin }
+                    preview: "Meeting: NovaWorks Client Delivery Planning\nDate: 7 October 2026 | Scheduled duration: 60 minutes ..."
+                    projects:
+                      - { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website }
+                      - { id: cmuxs0p4d0006wp0g2m9c7x1y, name: QuickServe Mobile App }
+                      - { id: cmuxs0p5r000bwp0gf3k8d2zq, name: HelpDeskPro AI Assistant }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /transcripts/extract:
+    post:
+      tags: [Transcripts]
+      summary: Preview what the AI extracts (saves nothing)
+      description: Same AI + validation as `POST /transcripts`, but never saves. `valid` tells whether a commit would succeed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TranscriptInput' }
+            example: { transcript: "Meeting: NovaWorks Client Delivery Planning ...", meetingDate: '2026-10-07' }
+      responses:
+        '200':
+          description: Draft and issues.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtractResult' }
+              example:
+                valid: false
+                issues:
+                  - { path: projects.2.tasks.2.assigneeCode, message: 'Project "HelpDeskPro AI Assistant": task "Human escalation flow": "Kamran" is not in the team directory' }
+                draft: *DraftWithKamran
+                alreadyImported: null
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/AiUnavailable' }
+        '503': { $ref: '#/components/responses/AiNotConfigured' }
+
+  /transcripts/commit:
+    post:
+      tags: [Transcripts]
+      summary: Save a corrected draft
+      description: |
+        Send the transcript plus the draft (from a 422 or from /extract), after the admin fixed the reported fields.
+        The server validates the draft again before saving; people may be given as code (`DEV05`), full name or unique first name.
+      parameters: [{ $ref: '#/components/parameters/Force' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommitInput' }
+            example:
+              transcript: "Meeting: NovaWorks Client Delivery Planning ..."
+              meetingDate: '2026-10-07'
+              draft: *DraftCorrected
+      responses:
+        '201':
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TranscriptResult' }
+              example: *TranscriptResult
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Duplicate or already in progress.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: TRANSCRIPT_IN_PROGRESS, message: This transcript is already being processed. Please wait. } }
+        '422': { $ref: '#/components/responses/DraftInvalid' }
+
+  /transcripts/{id}:
+    get:
+      tags: [Transcripts]
+      summary: One import with its full transcript text
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: The import.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcript: { $ref: '#/components/schemas/TranscriptDetail' }
+              example:
+                transcript:
+                  id: cmuxs0p1x0000wp0g8a3h5c2d
+                  meetingDate: '2026-10-07'
+                  createdAt: '2026-10-07T10:05:12.000Z'
+                  createdBy: { id: cmuxri79o0000wp08kx3iju70, name: Admin }
+                  content: "Meeting: NovaWorks Client Delivery Planning\nDate: 7 October 2026 | Scheduled duration: 60 minutes\n..."
+                  projects:
+                    - { id: cmuxs0p2k0001wp0g4h7tq2ab, name: UrbanCart Website }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: cmuxs0p2k0001wp0g4h7tq2ab
+    StatusFilter:
+      name: status
+      in: query
+      schema: { $ref: '#/components/schemas/TaskStatus' }
+    AssigneeFilter:
+      name: assigneeId
+      in: query
+      schema: { type: string }
+    Force:
+      name: force
+      in: query
+      description: Import even if this exact transcript was imported before.
+      schema: { type: string, enum: ['true', 'false'] }
+
+  responses:
+    ValidationError:
+      description: Invalid request (every problem listed in `details`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Request validation failed
+              details:
+                - { path: deadline, message: Must be a date in YYYY-MM-DD format }
+    Unauthorized:
+      description: Missing, invalid or expired token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNAUTHORIZED, message: Missing or malformed Authorization header } }
+    Forbidden:
+      description: The caller's role may not do this.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: FORBIDDEN, message: 'This action requires role: ADMIN' } }
+    NotFound:
+      description: Does not exist, or is outside the caller's scope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: NOT_FOUND, message: Project not found } }
+    DraftInvalid:
+      description: The AI draft has unresolved fields. Nothing was saved. Fix `draft` and send it to POST /transcripts/commit.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - { $ref: '#/components/schemas/Error' }
+              - type: object
+                properties:
+                  draft: { $ref: '#/components/schemas/ExtractionDraft' }
+          example:
+            error:
+              code: DRAFT_INVALID
+              message: Some required information could not be resolved. Correct the draft and submit it to POST /api/transcripts/commit. Nothing was saved.
+              details:
+                - { path: projects.2.tasks.2.assigneeCode, message: 'Project "HelpDeskPro AI Assistant": task "Human escalation flow": "Kamran" is not in the team directory' }
+            draft: *DraftWithKamran
+    AiUnavailable:
+      description: The AI service failed or returned unusable output. Nothing was saved; retry.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: AI_UNAVAILABLE, message: The AI service timed out. Please try again. } }
+    AiNotConfigured:
+      description: Real AI selected (AI_MOCK=false) but OPENROUTER_API_KEY is not set.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: AI_NOT_CONFIGURED, message: OPENROUTER_API_KEY is not set (or set AI_MOCK=true for offline mode). } }
+
+  schemas:
+    Role:
+      type: string
+      enum: [ADMIN, MANAGER, DEVELOPER]
+    TaskStatus:
+      type: string
+      enum: [TODO, IN_PROGRESS, DONE]
+    Date:
+      type: string
+      format: date
+      example: '2026-10-20'
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string }
+            details:
+              description: For validation errors, a list of `{ path, message }`; for some other errors, an object.
+              oneOf:
+                - type: array
+                  items: { $ref: '#/components/schemas/Issue' }
+                - type: object
+    Issue:
+      type: object
+      required: [path, message]
+      properties:
+        path: { type: string, example: tasks.0.deadline, description: 'Dot path to the field; "" for the whole body.' }
+        message: { type: string }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    LoginResult:
+      type: object
+      properties:
+        token: { type: string, description: "JWT; send as `Authorization: Bearer <token>`. Expires after JWT_EXPIRES_IN (default 8h)." }
+        user: { $ref: '#/components/schemas/User' }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string, example: DEV01, description: "Stable directory reference (ADMIN, PM01–PM03, DEV01–DEV06)." }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        specialization: { type: string }
+        skills: { type: array, items: { type: string } }
+    UserSummary:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        specialization: { type: string }
+    ProjectSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        clientName: { type: string }
+        description: { type: string }
+        deadline: { $ref: '#/components/schemas/Date' }
+        manager: { $ref: '#/components/schemas/UserSummary' }
+        members:
+          type: array
+          description: Developers assigned to the tasks visible to the caller.
+          items: { $ref: '#/components/schemas/UserSummary' }
+        taskCount: { type: integer, description: Tasks visible to the caller. }
+        totalEstimatedHours: { type: number, description: Sum over tasks visible to the caller. }
+        transcriptId: { type: string, nullable: true, description: "The import that created this project, if any." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProjectDetail:
+      allOf:
+        - { $ref: '#/components/schemas/ProjectSummary' }
+        - type: object
+          properties:
+            tasks:
+              type: array
+              items: { $ref: '#/components/schemas/Task' }
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        project:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            clientName: { type: string }
+        title: { type: string }
+        description: { type: string }
+        assignee: { $ref: '#/components/schemas/UserSummary' }
+        deadline: { $ref: '#/components/schemas/Date' }
+        estimatedHours: { type: number }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateTaskInput:
+      type: object
+      additionalProperties: false
+      required: [title, assigneeId, deadline, estimatedHours]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, default: '' }
+        assigneeId: { type: string, description: User id of a DEVELOPER. }
+        deadline: { $ref: '#/components/schemas/Date' }
+        estimatedHours: { type: number, exclusiveMinimum: true, minimum: 0 }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+    UpdateTaskInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title: { type: string }
+        description: { type: string }
+        assigneeId: { type: string }
+        deadline: { $ref: '#/components/schemas/Date' }
+        estimatedHours: { type: number, exclusiveMinimum: true, minimum: 0 }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+    CreateProjectInput:
+      type: object
+      additionalProperties: false
+      required: [name, clientName, managerId, deadline]
+      properties:
+        name: { type: string, maxLength: 200 }
+        clientName: { type: string, maxLength: 200 }
+        description: { type: string, default: '' }
+        managerId: { type: string, description: User id of a MANAGER. }
+        deadline: { $ref: '#/components/schemas/Date' }
+        tasks:
+          type: array
+          default: []
+          items: { $ref: '#/components/schemas/CreateTaskInput' }
+    UpdateProjectInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string }
+        clientName: { type: string }
+        description: { type: string }
+        managerId: { type: string, description: ADMIN only. }
+        deadline: { $ref: '#/components/schemas/Date' }
+    TranscriptInput:
+      type: object
+      additionalProperties: false
+      required: [transcript]
+      properties:
+        transcript: { type: string, minLength: 20, maxLength: 100000 }
+        meetingDate:
+          allOf: [{ $ref: '#/components/schemas/Date' }]
+          description: Reference for dates without a year. Defaults to today (Asia/Karachi).
+    CommitInput:
+      allOf:
+        - { $ref: '#/components/schemas/TranscriptInput' }
+        - type: object
+          required: [draft]
+          properties:
+            draft: { $ref: '#/components/schemas/ExtractionDraft' }
+    ExtractionDraft:
+      type: object
+      description: What the AI extracted. Any field may be null when it could not be determined.
+      required: [projects]
+      properties:
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/DraftProject' }
+    DraftProject:
+      type: object
+      properties:
+        name: { type: string, nullable: true }
+        clientName: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        managerCode: { type: string, nullable: true, description: Directory code (e.g. PM01) of a MANAGER. }
+        deadline: { type: string, nullable: true, description: YYYY-MM-DD }
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/DraftTask' }
+    DraftTask:
+      type: object
+      properties:
+        title: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        assigneeCode: { type: string, nullable: true, description: Directory code (e.g. DEV01) of a DEVELOPER. }
+        deadline: { type: string, nullable: true, description: YYYY-MM-DD }
+        estimatedHours: { type: number, nullable: true }
+    ExtractResult:
+      type: object
+      properties:
+        valid: { type: boolean }
+        issues: { type: array, items: { $ref: '#/components/schemas/Issue' } }
+        draft: { $ref: '#/components/schemas/ExtractionDraft' }
+        alreadyImported:
+          type: object
+          nullable: true
+          properties:
+            transcriptId: { type: string }
+            importedAt: { type: string, format: date-time }
+    TranscriptResult:
+      type: object
+      properties:
+        transcriptId: { type: string }
+        totals:
+          type: object
+          properties:
+            projects: { type: integer }
+            tasks: { type: integer }
+            estimatedHours: { type: number }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectDetail' }
+    TranscriptSummary:
+      type: object
+      properties:
+        id: { type: string }
+        meetingDate: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+        createdBy:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        preview: { type: string, description: First 200 characters. }
+        projects:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+    TranscriptDetail:
+      type: object
+      properties:
+        id: { type: string }
+        meetingDate: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+        createdBy:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        content: { type: string }
+        projects:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }

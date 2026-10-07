@@ -6,6 +6,8 @@ const app = createApp();
 
 const server = app.listen(env.PORT, () => {
   console.log(`NovaWorks CRM API listening on http://localhost:${env.PORT}/api`);
+  console.log(`API docs: http://localhost:${env.PORT}/api/docs`);
+  console.log(`CORS allowed origin(s): ${env.FRONTEND_URL.join(', ')} | AI: ${env.AI_MOCK ? 'mock (offline)' : env.AI_MODEL}`);
 });
 
 const shutdown = () => {

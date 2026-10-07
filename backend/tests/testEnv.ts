@@ -8,4 +8,5 @@ export const TEST_ENV = {
   JWT_EXPIRES_IN: '1h',
   AI_MOCK: 'true',
   OPENROUTER_API_KEY: '',
+  FRONTEND_URL: 'http://localhost:5173, https://crm.novaworks.example/',
 } as const;
