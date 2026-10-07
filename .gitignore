@@ -1,13 +1,6 @@
-# Local secrets and runtime configuration
 .env
-**/.env
+.env.*
 !.env.example
-
-# Installed dependencies
 node_modules/
-**/node_modules/
-
-# Local output
 *.log
 coverage/
-.DS_Store

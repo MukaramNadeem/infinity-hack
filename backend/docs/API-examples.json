@@ -1,0 +1,155 @@
+{
+  "login": {
+    "user": {
+      "id": "ADMIN",
+      "name": "Admin",
+      "email": "admin@novaworks.example",
+      "role": "ADMIN",
+      "specialization": "Administrator"
+    }
+  },
+  "create": {
+    "result": {
+      "projectCount": 3,
+      "taskCount": 12,
+      "projects": [
+        {
+          "id": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+          "name": "UrbanCart Website",
+          "clientName": "UrbanCart Clothing",
+          "managerId": "PM01",
+          "deadline": "2026-10-20",
+          "taskCount": 4
+        },
+        {
+          "id": "46505c4b-6c53-4ac0-8479-4d63397b4a41",
+          "name": "QuickServe Mobile App",
+          "clientName": "QuickServe Services",
+          "managerId": "PM02",
+          "deadline": "2026-10-24",
+          "taskCount": 4
+        },
+        {
+          "id": "10d7de2a-e85d-4d2c-92b9-11a593657e31",
+          "name": "HelpDeskPro AI Assistant",
+          "clientName": "HelpDeskPro Solutions",
+          "managerId": "PM03",
+          "deadline": "2026-10-22",
+          "taskCount": 4
+        }
+      ]
+    }
+  },
+  "projects": {
+    "projects": [
+      {
+        "id": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+        "name": "UrbanCart Website",
+        "clientName": "UrbanCart Clothing",
+        "description": "A responsive website where customers can browse products, view product details, and add items to a demo cart. Real payments and inventory integration are not included in this phase.",
+        "deadline": "2026-10-20",
+        "manager": {
+          "id": "PM01",
+          "name": "Ayesha Khan"
+        },
+        "taskCount": 4,
+        "totalEstimatedHours": 40
+      },
+      {
+        "id": "10d7de2a-e85d-4d2c-92b9-11a593657e31",
+        "name": "HelpDeskPro AI Assistant",
+        "clientName": "HelpDeskPro Solutions",
+        "description": "A support assistant that answers questions from a supplied FAQ document and passes unresolved questions to a human team via a saved record. No external message sending or full support system integration.",
+        "deadline": "2026-10-22",
+        "manager": {
+          "id": "PM03",
+          "name": "Hina Malik"
+        },
+        "taskCount": 4,
+        "totalEstimatedHours": 38
+      },
+      {
+        "id": "46505c4b-6c53-4ac0-8479-4d63397b4a41",
+        "name": "QuickServe Mobile App",
+        "clientName": "QuickServe Services",
+        "description": "A Flutter customer app for signing in, requesting a service, and seeing the request's current status. Live maps, driver tracking, and payments are excluded for this version.",
+        "deadline": "2026-10-24",
+        "manager": {
+          "id": "PM02",
+          "name": "Bilal Ahmed"
+        },
+        "taskCount": 4,
+        "totalEstimatedHours": 46
+      }
+    ]
+  },
+  "detail": {
+    "project": {
+      "id": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+      "name": "UrbanCart Website",
+      "clientName": "UrbanCart Clothing",
+      "description": "A responsive website where customers can browse products, view product details, and add items to a demo cart. Real payments and inventory integration are not included in this phase.",
+      "deadline": "2026-10-20",
+      "manager": {
+        "id": "PM01",
+        "name": "Ayesha Khan"
+      },
+      "taskCount": 4,
+      "totalEstimatedHours": 40
+    },
+    "tasks": [
+      {
+        "id": "66306ff5-dbb6-427c-931b-b041f080a299",
+        "projectId": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+        "title": "Product catalog UI",
+        "description": "Implement the product catalog interface including product listing, a product detail screen, and responsive layout.",
+        "deadline": "2026-10-12",
+        "estimatedHours": 12,
+        "assignee": {
+          "id": "DEV01",
+          "name": "Ali Raza",
+          "specialization": "Full-Stack"
+        }
+      },
+      {
+        "id": "f35b6c5e-a9d6-4b42-920f-95a1f344b607",
+        "projectId": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+        "title": "Product and cart APIs",
+        "description": "Develop APIs for product responses and demo cart endpoints, without payment processing.",
+        "deadline": "2026-10-14",
+        "estimatedHours": 14,
+        "assignee": {
+          "id": "DEV02",
+          "name": "Hamza Shah",
+          "specialization": "Full-Stack"
+        }
+      },
+      {
+        "id": "03db40b0-facf-4f98-b770-9fcd9bedf994",
+        "projectId": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+        "title": "Demo cart UI",
+        "description": "Implement the demo cart interface, covering adding and removing items, quantities, and a visible total.",
+        "deadline": "2026-10-15",
+        "estimatedHours": 8,
+        "assignee": {
+          "id": "DEV01",
+          "name": "Ali Raza",
+          "specialization": "Full-Stack"
+        }
+      },
+      {
+        "id": "3136d84d-bca3-4057-8302-42408e9ea82d",
+        "projectId": "b1743cf7-bf25-4847-8abb-5ff9d3424025",
+        "title": "Website integration and testing",
+        "description": "Connect the screens and test the demo flow of the website.",
+        "deadline": "2026-10-19",
+        "estimatedHours": 6,
+        "assignee": {
+          "id": "DEV01",
+          "name": "Ali Raza",
+          "specialization": "Full-Stack"
+        }
+      }
+    ]
+  }
+}
