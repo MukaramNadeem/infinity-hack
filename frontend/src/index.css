@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* DashStack (Figma) light theme */
+@theme {
+  --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary-50: #edf3ff;
+  --color-primary-100: #dae6ff;
+  --color-primary-200: #b6cdff;
+  --color-primary-300: #91b3ff;
+  --color-primary-500: #4880ff;
+  --color-primary-600: #4880ff;
+  --color-primary-700: #3a6be0;
+  --color-primary-800: #2c55b8;
+
+  --color-page: #f5f6fa;
+  --color-ink: #202224;
+  --color-line: #d5d5d5;
+}
+
+@utility card {
+  @apply rounded-[14px] bg-white shadow-[6px_6px_54px_rgba(0,0,0,0.05)];
+}
+
+/* "Button / Apply Now": solid blue, 6px radius, soft blue glow */
+@utility btn {
+  @apply inline-block rounded-md bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_6px_14px_-6px_#4880ff] hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Inputs follow the top-bar search field: light fill, thin grey border */
+@utility field {
+  @apply rounded-md border border-line bg-page px-3 py-2 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200;
+}
+
+body {
+  @apply bg-page text-ink antialiased;
+}
