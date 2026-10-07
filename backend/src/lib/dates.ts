@@ -21,6 +21,6 @@ function isRealDate(value: string): boolean {
 // Zod field: accepts "YYYY-MM-DD", outputs a Date at 00:00 UTC.
 export const dateOnlySchema = z
   .string()
-  .regex(DATE_ONLY, 'Must be a date in YYYY-MM-DD format')
+  .regex(DATE_ONLY, { message: 'Must be a date in YYYY-MM-DD format', abort: true }) // one error per bad value
   .refine(isRealDate, 'Not a valid calendar date')
   .transform(parseDateOnly);

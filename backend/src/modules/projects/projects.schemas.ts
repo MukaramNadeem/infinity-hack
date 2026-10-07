@@ -23,7 +23,10 @@ export const updateProjectSchema = z
     managerId: z.string().min(1).optional(),
     deadline: dateOnlySchema.optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field to update');
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'Provide at least one field to update',
+    when: (payload) => payload.issues.length === 0, // don't add this on top of e.g. an unknown-key error
+  });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;

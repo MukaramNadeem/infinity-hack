@@ -26,7 +26,10 @@ export const updateTaskSchema = z
     estimatedHours: estimatedHours.optional(),
     status: status.optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field to update');
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'Provide at least one field to update',
+    when: (payload) => payload.issues.length === 0, // don't add this on top of e.g. an unknown-key error
+  });
 
 export const taskListQuerySchema = z.object({
   projectId: z.string().min(1).optional(),
