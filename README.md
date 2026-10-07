@@ -49,7 +49,7 @@ Not included (not required by the brief): signup, password reset, user managemen
 
 ## Links
 - Live application: **Not deployed** (local demo).
-- Demo video: **TODO: link will be added here.**
+- Demo video: [docs/demo-video.webm](https://github.com/MukaramNadeem/infinity-hack/raw/main/docs/demo-video.webm) (about 1 minute; open the link to play or download)
 
 ## Requirements
 - Node.js 20 or newer, and npm
@@ -169,7 +169,7 @@ Importing the same transcript twice without a reset is refused with a "duplicate
 - Deployed branch/commit: n/a (submission branch: `main`)
 
 ### How We Deployed
-The project is not deployed. It is submitted as a local demo, with the demo video linked under [Links](#links). Run it with the steps in [Run Locally](#run-locally).
+The project is not deployed. It is submitted as a local demo, with the [demo video](https://github.com/MukaramNadeem/infinity-hack/raw/main/docs/demo-video.webm). Run it with the steps in [Run Locally](#run-locally).
 
 ## Known Limitations
 - **Not deployed and no hosted database.** It runs locally with SQLite. Moving to hosted PostgreSQL (e.g. Aiven) needs these steps:
@@ -186,7 +186,7 @@ More backend detail (all endpoints, error formats, AI modes, project structure) 
 
 ## Submission Summary
 - Source repository: https://github.com/MukaramNadeem/infinity-hack
-- Live link or local demo video: **TODO: demo video link** (not deployed)
+- Live link or local demo video: [demo video](https://github.com/MukaramNadeem/infinity-hack/raw/main/docs/demo-video.webm) (not deployed)
 - Setup and seed commands: documented above (`npm run db:deploy`, `npm run db:seed`, `npm run dev` in `backend/` and `frontend/`)
 - Demo login accounts: confirmed working (all ten, password `Demo123!`)
 - Features completed:
