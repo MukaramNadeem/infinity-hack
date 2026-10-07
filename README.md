@@ -1,234 +1,203 @@
-# NovaWorks PM CRM — Backend API
+# NovaWorks CRM - AI Meeting to Project CRM
 
-Backend for the **NovaWorks Technologies** project-management CRM (The Infinity Hack '26, *AI Project Manager — Meeting to Execution*).
-The admin pastes a meeting transcript; AI extracts the projects and tasks, assigns the managers and developers from the team directory,
-sets deadlines and estimated hours, and saves everything. Managers and developers log in and see only their own work.
+A small project-management CRM for the fictional **NovaWorks Technologies** (The Infinity Hack '26, *AI Project Manager - Meeting to Execution*).
+The admin pastes a meeting transcript and clicks **Create from Transcript**. AI then creates the projects and tasks, assigns the managers and developers from the team directory, and sets deadlines and estimated hours. Managers and developers log in and see only their own work.
 
-The frontend is built separately and talks to this API. **Interactive API docs with request/response examples: `http://localhost:4000/api/docs`.**
+## Team
+- Team name: **Coders**
+- Members and responsibilities:
+  - **Athar Abbas**: frontend (React app, UI and theme, frontend–backend integration contract)
+  - **Moaz Nadeem**: AI integration (OpenRouter provider, prompt, structured output and validation)
+  - **Mukaram Nadeem**: backend (Express API, database, auth, role-based access)
+  - **Hamza Usman**: testing (end-to-end checks of the demo flow and access rules)
+- Repository: https://github.com/MukaramNadeem/infinity-hack
 
-## What works
+## What Works
+- **Login/logout** with the ten seeded demo accounts. No signup, password reset or user management, as the brief specifies.
+- **Admin:** sees all project cards with summary stats, plus **Create from Transcript**.
+  - Paste the meeting, or click **Load supplied transcript**, then click Create.
+  - The AI extracts 3 projects and 12 tasks, using only people from the directory.
+  - Shows a loading state, then the created projects or a clear error. The button is disabled while processing.
+- **Draft validation and correction:** the AI draft is validated before anything is saved.
+  - If a person, date or hours value is invalid, nothing is saved. The admin sees each issue next to the field, corrects it and saves again.
+  - Saving is all-or-nothing (one database transaction).
+  - Re-importing the same transcript is blocked (`409`).
+- **Manager:** sees only the projects they manage, with all tasks in them.
+- **Developer (agent):** lands on **My Tasks** and sees only their own tasks and the related projects.
+- **Project detail:** client, manager, deadline and totals, plus task rows with title, description, assignee, deadline and estimated hours.
+- **Team directory:** read-only, with names, roles, specializations and skills.
+- **Role-based access is enforced by the API on every request**, not only hidden in the UI:
+  - Another user's project or task returns `404`.
+  - A non-admin calling the transcript endpoint gets `403`.
+  - No or invalid token gets `401`.
+- **Saved records** persist in the database across refreshes and server restarts.
+- **Tests:** 122 backend tests (Jest + Supertest) cover auth, role-based access, validation and the transcript flow.
 
-- **Login** with ten pre-seeded demo accounts (JWT). No signup or password reset, as specified.
-- **Team directory**: read-only, with names, emails, roles, specializations and skills.
-- **Projects and tasks**: client, manager, deadline, members and task list, plus task title, description, assignee, deadline, estimated hours and status.
-- **Create from Transcript** (admin only):
-  - The AI turns a meeting into projects and tasks, using only people who exist in the directory.
-  - Everything is validated, then saved in one transaction: all of it or nothing.
-  - Unresolvable information (an unknown person, a missing date, …) comes back as a list of issues plus the draft, so the admin can correct it and commit.
-  - Re-importing the same transcript and double clicks are blocked.
-- **Role-based access**, enforced on every request (not just hidden in the UI):
+Not included (not required by the brief): signup, password reset, user management, cost calculation and progress monitoring.
 
-  | Role | Projects | Tasks |
-  |---|---|---|
-  | ADMIN | all | all |
-  | MANAGER | projects they manage | all tasks in those projects |
-  | DEVELOPER | projects containing their tasks | only tasks assigned to them; may only change a task's `status` |
+## Technology Stack
+- **Frontend:** React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 7. Theme based on the DashStack Figma UI kit.
+- **Backend:** Node.js (20+, tested on 22 and 24), Express 5, TypeScript 5.9, Zod 4 validation. OpenAPI docs at `/api/docs`.
+- **Database:** SQLite through Prisma 6.19 (file `backend/prisma/dev.db`).
+- **AI:** OpenRouter (OpenAI-compatible API), model `openai/gpt-4o-mini` (set with `AI_MODEL`), JSON-schema structured output validated with Zod.
+  - The AI receives only each person's directory code, name, role, specialization and skills, never emails or passwords.
+  - An offline mock provider is used for tests.
+- **Authentication:**
+  - Passwords are hashed with bcrypt.
+  - `POST /api/auth/login` returns a JWT, and the frontend sends it as `Authorization: Bearer <token>`.
+  - The server determines the current user from the token only, never from a role or ID sent by the client.
 
-  Anything outside a user's scope returns `404`.
-- **Tests**: 120 Jest + Supertest tests. They use a separate test database and an offline mock AI.
-- **Real-AI result**: the supplied transcript, run through OpenRouter with `openai/gpt-4o-mini`, produced 3 projects and 12 tasks matching the organizer answer key exactly. The changed-input test (QuickServe integration at 12 h, due 23 Oct) changed only that task.
-
-## Technology stack
-
-| | |
-|---|---|
-| Runtime | Node.js (tested on 24.20) · TypeScript 5.9 |
-| API | Express 5 · Zod 4 validation · OpenAPI 3 docs (Swagger UI) |
-| Database | SQLite via Prisma 6.19 |
-| Auth | JWT (`jsonwebtoken`), passwords hashed with bcrypt (`bcryptjs`) |
-| AI | OpenRouter (OpenAI-compatible API) through the `openai` SDK; model set by `AI_MODEL`. JSON-schema structured output, validated with Zod. Offline mock provider for dev and tests. |
-| Tests | Jest 30 · Supertest 7 |
+## Links
+- Live application: **Not deployed** (local demo).
+- Demo video: **TODO: link will be added here.**
 
 ## Requirements
+- Node.js 20 or newer, and npm
+- Git
+- No database server needed: SQLite is a local file that Prisma creates.
+- An [OpenRouter](https://openrouter.ai) API key for the real AI.
+  - Without a key, `AI_MOCK="true"` runs an offline mock that only understands the supplied transcript's final-recap format.
 
-- Node.js 20 or newer, and npm.
-- For the real AI: an [OpenRouter](https://openrouter.ai) API key. Without one, set `AI_MOCK="true"` (see [AI modes](#ai-modes)).
+## Run Locally
+1. Clone this repository and enter its directory:
+   ```sh
+   git clone https://github.com/MukaramNadeem/infinity-hack.git
+   cd infinity-hack
+   ```
+2. Install dependencies (backend and frontend are separate folders):
+   ```sh
+   cd backend && npm install && cd ..
+   cd frontend && npm install && cd ..
+   ```
+3. Copy the provided env examples:
+   ```sh
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
+4. Edit `backend/.env`:
+   - Set `JWT_SECRET` to a long random string. You can generate one with:
+     `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+   - For the real AI, set `OPENROUTER_API_KEY` to your key and `AI_MOCK="false"`.
+   - `frontend/.env` already points at `http://localhost:4000`. No change is needed.
+5. Create the database: the SQLite file `backend/prisma/dev.db` is created by the migration in the next step. No separate database server is needed.
+6. Apply schema/migrations:
+   ```sh
+   cd backend
+   npm run db:deploy
+   ```
+7. Seed all ten demo users (still in `backend/`). Re-running it never duplicates users:
+   ```sh
+   npm run db:seed
+   ```
+8. Start the backend and frontend in **two terminals**, and keep both running:
+   ```sh
+   # Terminal 1: API on http://localhost:4000/api (docs at http://localhost:4000/api/docs)
+   cd backend && npm run dev
 
-## Run locally
+   # Terminal 2: web app on http://localhost:5173
+   cd frontend && npm run dev
+   ```
+   Open **http://localhost:5173** in the browser.
+   The frontend must run on port 5173, because that is the origin the backend allows (`FRONTEND_URL`).
 
-All commands run from the `backend/` folder.
+Optional: `cd backend && npm test` runs the 122 backend tests. They use a separate test database and the mock AI, so they never call the real API.
 
+## Environment Variables
+| Variable | Purpose | Where configured |
+| --- | --- | --- |
+| `DATABASE_URL` | SQLite database file (default `file:./dev.db`) | `backend/.env` |
+| `JWT_SECRET` | Signs login tokens (min. 16 characters) | `backend/.env` |
+| `JWT_EXPIRES_IN` | Login token lifetime (default `8h`) | `backend/.env` |
+| `OPENROUTER_API_KEY` | AI provider credential | `backend/.env` only |
+| `AI_MODEL` | AI model selection (default `openai/gpt-4o-mini`) | `backend/.env` |
+| `AI_MOCK` | `"false"` = real AI via OpenRouter (use for judging); `"true"` = offline mock | `backend/.env` |
+| `FRONTEND_URL` | Browser origin(s) allowed by CORS (default `http://localhost:5173`) | `backend/.env` |
+| `PORT` / `HOST` | API port and listen address (defaults `4000` / `0.0.0.0`) | `backend/.env` |
+| `VITE_API_URL` | Backend base URL used by the frontend (`http://localhost:4000`) | `frontend/.env` |
+| `VITE_USE_MOCK` | `"true"` runs the frontend against its built-in in-browser mock API (UI demo without a backend) | `frontend/.env` |
+
+`.env` files are git-ignored. Only `.env.example` files with placeholders are committed. The AI key and database settings live in the backend only and are never exposed to the browser.
+
+## Demo Login Accounts
+These emails are fictional identifiers, not mailboxes. Signup, email verification and forgot password are unnecessary.
+
+| Role | Name | Demo email | Password |
+| --- | --- | --- | --- |
+| Admin | Admin | admin@novaworks.example | Demo123! |
+| Manager | Ayesha Khan | ayesha@novaworks.example | Demo123! |
+| Manager | Bilal Ahmed | bilal@novaworks.example | Demo123! |
+| Manager | Hina Malik | hina@novaworks.example | Demo123! |
+| Developer | Ali Raza | ali@novaworks.example | Demo123! |
+| Developer | Hamza Shah | hamza@novaworks.example | Demo123! |
+| Developer | Sara Noor | sara@novaworks.example | Demo123! |
+| Developer | Usman Tariq | usman@novaworks.example | Demo123! |
+| Developer | Zain Abbas | zain@novaworks.example | Demo123! |
+| Developer | Maryam Asif | maryam@novaworks.example | Demo123! |
+
+The accounts are created by `cd backend && npm run db:seed` (step 7 above). Run it once after the migrations. Running it again is safe.
+The login page also lists these accounts: click one to fill in the form.
+
+## How Judges Can Test
+1. Log in as admin, then open **Create from Transcript** (button on the Projects page, or **Import Transcript** in the sidebar).
+2. Paste the supplied meeting transcript, or click **Load supplied transcript**. The file is `frontend/public/sample-transcript.txt`, also in `backend/tests/fixtures/meeting-transcript.txt`.
+3. Click **Create from Transcript**. Expect **3 projects and 12 tasks** (UrbanCart 40 h, QuickServe 46 h, HelpDeskPro 38 h). The real AI takes a few seconds.
+4. Open **UrbanCart Website**: manager Ayesha Khan, deadline 20 Oct 2026, four tasks.
+5. Log out and log in as **Ayesha**: only *UrbanCart Website* appears.
+6. Log in as **Ali**: My Tasks shows only his three UrbanCart tasks.
+7. Log in as **Hamza**: his two API tasks span UrbanCart and QuickServe.
+8. Verify other users' data can't be fetched directly:
+   - As Ali, open the URL of the QuickServe or HelpDeskPro project: you get "Project not found".
+   - Direct API calls give the same result: `GET /api/projects/{id}` returns `404`, and `POST /api/transcripts` as a non-admin returns `403`.
+   - You can try these in the Swagger UI at http://localhost:4000/api/docs (log in, then click **Authorize**).
+9. Refresh the page or restart the servers: the projects and tasks are still there.
+10. Test a modified transcript:
+    - Reset the demo data (below), then edit the transcript before creating.
+    - For example, change QuickServe's integration task to *12 hours, 23 October* in both the discussion and the final recap.
+    - Only *Mobile integration and testing* should change.
+
+**Reset generated projects/tasks between tests (keeps the ten users):**
 ```sh
-cd backend
-
-# 1. Install dependencies
-npm install
-
-# 2. Create your environment file, then edit it
-cp .env.example .env
-#    - set JWT_SECRET to a long random string, e.g. the output of:
-#        node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-#    - for the real AI: set OPENROUTER_API_KEY and AI_MOCK="false"
-
-# 3. Create the SQLite database (prisma/dev.db) from the migrations
-npm run db:deploy
-
-# 4. Seed the ten demo users (safe to re-run; it never duplicates users)
-npm run db:seed
-
-# 5. Start the API (auto-reloads on code changes)
-npm run dev
+cd backend && npm run db:reset-demo
 ```
+Importing the same transcript twice without a reset is refused with a "duplicate transcript" message.
 
-Keep `npm run dev` running. The API is at **http://localhost:4000/api** and the docs at **http://localhost:4000/api/docs**.
-The frontend dev server is expected at `http://localhost:5173`; change `FRONTEND_URL` if yours runs elsewhere.
+## Deployment Details
+- Deployment status: **Local only**
+- Frontend host: Not deployed (runs locally with `npm run dev` at http://localhost:5173)
+- Backend host: Not deployed (runs locally with `npm run dev` at http://localhost:4000)
+- Database: local SQLite file (`backend/prisma/dev.db`) via Prisma
+- Deployed branch/commit: n/a (submission branch: `main`)
 
-```sh
-# 6. Run the tests (separate database at prisma/test.db, mock AI, never calls the real API)
-npm test
-```
+### How We Deployed
+The project is not deployed. It is submitted as a local demo, with the demo video linked under [Links](#links). Run it with the steps in [Run Locally](#run-locally).
 
-Other scripts:
+## Known Limitations
+- **Not deployed and no hosted database.** It runs locally with SQLite. Moving to hosted PostgreSQL (e.g. Aiven) needs these steps:
+  1. Switch the Prisma provider to `postgresql` and point `DATABASE_URL` at the hosted database.
+  2. Regenerate the migrations.
+  3. Run `db:deploy` and `db:seed` against it.
+- **The real AI needs an OpenRouter key and network access.** AI output can vary slightly between runs. It is always validated before saving, so a bad extraction shows issues to correct and is never saved half-way.
+- **`AI_MOCK="true"` is not a language model.** It only parses the supplied transcript's "Final recap" sentence format. Use the real AI for judging and for other transcripts.
+- **Re-importing the same transcript requires a reset** (`npm run db:reset-demo`).
+- **Logout is client-side.** It deletes the token, and the JWT stays valid until it expires (`JWT_EXPIRES_IN`, default 8 h).
+- **Editing projects/tasks is API-only.** The API supports it, but there are no edit screens in the UI. Editing was optional in the brief.
 
-| Command | What it does |
-|---|---|
-| `npm run db:reset-demo` | Deletes all projects, tasks and imported transcripts; **keeps the users**. Use it between transcript demos. |
-| `npm run db:migrate` | Create and apply a new migration after editing `prisma/schema.prisma` (development). |
-| `npm run db:studio` | Browse the database in Prisma Studio. |
-| `npm run typecheck` | TypeScript check of the app and the tests. |
-| `npm run build` then `npm start` | Production build (`dist/`) and start. |
+More backend detail (all endpoints, error formats, AI modes, project structure) is in [`backend/README.md`](backend/README.md). The frontend–backend contract is in [`API_CONTRACT.md`](API_CONTRACT.md).
 
-## Environment variables
-
-Configured in `backend/.env`. See `backend/.env.example`; never commit `.env`.
-
-| Variable | Purpose | Default |
-|---|---|---|
-| `DATABASE_URL` | SQLite file, relative to `prisma/schema.prisma` | `file:./dev.db` |
-| `JWT_SECRET` | Signs login tokens (min. 16 characters) | — (required) |
-| `JWT_EXPIRES_IN` | Token lifetime | `8h` |
-| `OPENROUTER_API_KEY` | OpenRouter API key (backend only) | — |
-| `AI_MODEL` | OpenRouter model id; change models without code changes | `openai/gpt-4o-mini` |
-| `AI_MOCK` | `"true"` = offline mock AI, `"false"` = real AI via OpenRouter | `false` (`.env.example` sets `"true"`) |
-| `FRONTEND_URL` | Origin(s) allowed by CORS; comma-separate several | `http://localhost:5173` |
-| `PORT` | API port | `4000` |
-| `HOST` | Listen address; `0.0.0.0` makes the API reachable as both `localhost` and `127.0.0.1` (incl. from Windows when running in WSL) | `0.0.0.0` |
-
-## Demo login accounts
-
-The emails are fictional identifiers, not real mailboxes. Every password is **`Demo123!`**. They are created by `npm run db:seed`.
-
-| Role | Name | Email | Password | Directory code |
-|---|---|---|---|---|
-| Admin | Admin | admin@novaworks.example | Demo123! | ADMIN |
-| Manager (Web PM) | Ayesha Khan | ayesha@novaworks.example | Demo123! | PM01 |
-| Manager (Mobile PM) | Bilal Ahmed | bilal@novaworks.example | Demo123! | PM02 |
-| Manager (AI PM) | Hina Malik | hina@novaworks.example | Demo123! | PM03 |
-| Developer (Full-Stack) | Ali Raza | ali@novaworks.example | Demo123! | DEV01 |
-| Developer (Full-Stack) | Hamza Shah | hamza@novaworks.example | Demo123! | DEV02 |
-| Developer (App) | Sara Noor | sara@novaworks.example | Demo123! | DEV03 |
-| Developer (App) | Usman Tariq | usman@novaworks.example | Demo123! | DEV04 |
-| Developer (AI) | Zain Abbas | zain@novaworks.example | Demo123! | DEV05 |
-| Developer (AI) | Maryam Asif | maryam@novaworks.example | Demo123! | DEV06 |
-
-## AI modes
-
-| `AI_MOCK` | Behaviour |
-|---|---|
-| `"false"` | **Real AI.** The transcript and the directory are sent to OpenRouter (`AI_MODEL`). Only code, name, role, specialization and skills are sent; never emails or passwords. The prompt tells the model to use final decisions, drop rejected features and never invent people. |
-| `"true"` | **Offline mock**, for development and tests. It is *not* a language model: it only parses the sample meeting's "Final recap" sentence format (`Ali owns Product catalog UI: 12 hours, 12 October.`). Edits to the recap still change the result. Use the real AI for judging and for other transcripts. |
-
-## Try the transcript flow
-
-The supplied meeting is in [`backend/tests/fixtures/meeting-transcript.txt`](backend/tests/fixtures/meeting-transcript.txt).
-With the server running (in another terminal, from `backend/`):
-
-```sh
-# Log in as admin
-TOKEN=$(curl -s -X POST localhost:4000/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"admin@novaworks.example","password":"Demo123!"}' | node -pe 'JSON.parse(require("fs").readFileSync(0)).token')
-
-# Create from Transcript
-node -e 'process.stdout.write(JSON.stringify({ transcript: require("fs").readFileSync("tests/fixtures/meeting-transcript.txt", "utf8"), meetingDate: "2026-10-07" }))' \
-  | curl -s -X POST localhost:4000/api/transcripts -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data-binary @- \
-  | node -pe 'const r = JSON.parse(require("fs").readFileSync(0)); JSON.stringify(r.totals ?? r, null, 2)'
-```
-
-Expected result: `{ "projects": 3, "tasks": 12, "estimatedHours": 124 }`. Running it again returns `409 DUPLICATE_TRANSCRIPT`; run `npm run db:reset-demo` first to import it again.
-You can also do all of this from the Swagger UI at `/api/docs`: log in, click **Authorize**, and paste the token.
-
-### How judges can test (challenge section 8)
-
-| Step | API call | Expected |
-|---|---|---|
-| Log in as admin, create from transcript | `POST /api/transcripts` | 201: 3 projects, 12 tasks |
-| Open UrbanCart | `GET /api/projects/{id}` | manager Ayesha, deadline 2026-10-20, 4 tasks (40 h) |
-| Log in as Ayesha | `GET /api/projects` | only *UrbanCart Website* |
-| Log in as Ali | `GET /api/tasks` | only his 3 UrbanCart tasks |
-| Ali opens another project or task directly | `GET /api/projects/{QuickServe id}` | `404` |
-| Log in as Hamza | `GET /api/tasks` | 2 tasks across UrbanCart and QuickServe |
-| Refresh | any `GET` | data is persisted in SQLite |
-| Changed input: in the transcript, change QuickServe integration to 12 hours and 23 October, then reset and re-import | `POST /api/transcripts` | only *Mobile integration and testing* changes (12 h, 2026-10-23) |
-
-## API overview
-
-Full reference with schemas and examples: **`/api/docs`** (raw spec: `/api/docs/openapi.json`, source: [`backend/docs/openapi.yaml`](backend/docs/openapi.yaml)).
-All endpoints are under `/api`. Every request except login, health and docs needs `Authorization: Bearer <token>`.
-
-| Method & path | Who | Purpose |
-|---|---|---|
-| `POST /auth/login` · `GET /auth/me` · `POST /auth/logout` | all | Log in (returns `{ token, user }`), current user, log out |
-| `GET /users` · `GET /users/{id}` | all | Team directory (`?role=MANAGER\|DEVELOPER`) |
-| `GET /projects` · `GET /projects/{id}` | all (filtered) | Project cards / detail with tasks |
-| `GET /projects/{id}/tasks` | all (filtered) | Tasks of one project (`?status=&assigneeId=`) |
-| `POST /projects` | ADMIN | Create a project manually (optionally with tasks) |
-| `PATCH /projects/{id}` | ADMIN, its manager | Edit project (only ADMIN can change the manager) |
-| `DELETE /projects/{id}` | ADMIN | Delete project and its tasks |
-| `POST /projects/{id}/tasks` | ADMIN, its manager | Add a task |
-| `GET /tasks` · `GET /tasks/{id}` | all (filtered) | "My Tasks" for developers (`?projectId=&status=&assigneeId=`) |
-| `PATCH /tasks/{id}` | ADMIN, its manager; assigned developer: `status` only | Edit task |
-| `DELETE /tasks/{id}` | ADMIN, its manager | Delete task |
-| `POST /transcripts` | ADMIN | **Create from Transcript** (AI → validate → save) |
-| `POST /transcripts/extract` | ADMIN | Preview the AI draft and issues, saves nothing |
-| `POST /transcripts/commit` | ADMIN | Save an admin-corrected draft (re-validated) |
-| `GET /transcripts` · `GET /transcripts/{id}` | ADMIN | Past imports |
-| `GET /health` | public | Liveness |
-
-**Notes for the frontend**
-
-- Dates are `YYYY-MM-DD` strings.
-- Errors are always `{ "error": { "code", "message", "details"? } }`. Validation errors list every problem in `details: [{ path, message }]`.
-- **Create from Transcript** takes a few seconds with the real AI: show a loading state and disable the button.
-  - `201` — show `totals` and `projects`.
-  - `422 DRAFT_INVALID` — show `error.details` next to the fields of the returned `draft`, let the admin fix them, then send `{ transcript, draft }` to `POST /transcripts/commit`.
-  - `409` — duplicate or already processing.
-  - `502` / `503` — AI problem; nothing was saved.
-- A developer's project view only contains their own tasks. `taskCount`, `totalEstimatedHours` and `members` follow the same rule.
-
-## Project structure
-
-```
-backend/
-  prisma/            schema.prisma, migrations/, seed.ts (demo users), reset-demo.ts
-  docs/openapi.yaml  API documentation served at /api/docs
-  src/
-    app.ts           Express app (routers, CORS, docs, error handling); server.ts starts it
-    config/env.ts    Zod-validated environment variables
-    access/scope.ts  Who can see which projects/tasks (single source of truth)
-    middleware/      authenticate (JWT), requireRole, validate (Zod), cors, errorHandler
-    modules/         auth, users, projects, tasks, transcripts (routes → controller → service)
-    ai/              AiProvider interface, OpenRouter provider, mock provider, prompt, output schema
-  tests/             Jest + Supertest suites, fixtures/meeting-transcript.txt
-```
-
-## Deployment
-
-Not deployed yet; this version runs locally with SQLite. To move to a hosted PostgreSQL database later (e.g. Aiven):
-1. Set `provider = "postgresql"` in `prisma/schema.prisma`.
-2. Point `DATABASE_URL` at the hosted database.
-3. Regenerate the migrations.
-4. Run `npm run db:deploy && npm run db:seed` against it.
-5. Add the deployed frontend URL to `FRONTEND_URL`.
-
-## Known limitations
-
-- **The mock AI only understands the sample's recap format.** Use `AI_MOCK="false"` with a key for any other transcript.
-- **Real-AI output can vary between runs.** It is validated before saving, so a bad extraction is rejected with a list of issues, never saved half-way.
-- **Logout is client-side.** It deletes the token; JWTs stay valid until they expire (`JWT_EXPIRES_IN`).
-- **The double-submit guard is in-memory.** It works for a single server process; the duplicate-transcript check is stored in the database.
-- **The database is SQLite and local only;** see [Deployment](#deployment).
-
-## Team and submission
-
-> To be completed by the team before submission: team name, members and responsibilities, repository URL, frontend location,
-> live link or demo video, and deployment details (see `README_Template (1).md`).
+## Submission Summary
+- Source repository: https://github.com/MukaramNadeem/infinity-hack
+- Live link or local demo video: **TODO: demo video link** (not deployed)
+- Setup and seed commands: documented above (`npm run db:deploy`, `npm run db:seed`, `npm run dev` in `backend/` and `frontend/`)
+- Demo login accounts: confirmed working (all ten, password `Demo123!`)
+- Features completed:
+  - seeded login/logout
+  - admin transcript → 3 projects / 12 tasks via real AI
+  - validation with a correction screen
+  - all-or-nothing save
+  - manager project view
+  - agent My Tasks view
+  - project detail with task rows
+  - team directory
+  - server-side role-based access
+  - persistent storage
+  - 122 backend tests
