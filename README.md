@@ -102,6 +102,7 @@ Configured in `backend/.env`. See `backend/.env.example`; never commit `.env`.
 | `AI_MOCK` | `"true"` = offline mock AI, `"false"` = real AI via OpenRouter | `false` (`.env.example` sets `"true"`) |
 | `FRONTEND_URL` | Origin(s) allowed by CORS; comma-separate several | `http://localhost:5173` |
 | `PORT` | API port | `4000` |
+| `HOST` | Listen address; `0.0.0.0` makes the API reachable as both `localhost` and `127.0.0.1` (incl. from Windows when running in WSL) | `0.0.0.0` |
 
 ## Demo login accounts
 

@@ -11,6 +11,9 @@ const booleanString = z
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
+  // Listen address. 0.0.0.0 (IPv4) is reachable as both localhost and 127.0.0.1, including from a
+  // Windows browser when the API runs in WSL2 (the default dual-stack bind is only forwarded as ::1).
+  HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('8h'),

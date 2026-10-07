@@ -82,6 +82,16 @@ function draftInvalid(draft: ExtractionDraft, issues: { path: string; message: s
   );
 }
 
+// The offline mock only understands the sample meeting's recap format. When it finds nothing,
+// say so, instead of leaving the admin to wonder why a valid meeting produced no projects.
+const MOCK_HINT =
+  ' — the offline mock AI is active (AI_MOCK="true"); it only understands the sample meeting\'s "Final recap" sentences. Set AI_MOCK="false" with an OPENROUTER_API_KEY in backend/.env and restart the backend to use the real AI.';
+
+function explainMockIssues(issues: { path: string; message: string }[]) {
+  if (getAiProvider().name !== 'mock') return issues;
+  return issues.map((i) => (i.path === 'projects' ? { ...i, message: i.message + MOCK_HINT } : i));
+}
+
 // All-or-nothing save: the transcript record, every project and every task, or nothing.
 async function saveAll(admin: AuthUser, input: TranscriptInput, contentHash: string, projects: ResolvedProject[]) {
   const { transcriptId, projectIds } = await prisma.$transaction(async (tx) => {
@@ -145,7 +155,7 @@ export async function extract(input: TranscriptInput) {
 
   return {
     valid: result.ok,
-    issues: result.ok ? [] : result.issues,
+    issues: result.ok ? [] : explainMockIssues(result.issues),
     draft,
     alreadyImported: previous ? { transcriptId: previous.id, importedAt: previous.createdAt } : null,
   };
@@ -175,7 +185,7 @@ export async function createFromTranscript(admin: AuthUser, input: TranscriptInp
       directory: forAi,
     });
     const result = validateDraft(draft, users);
-    if (!result.ok) throw draftInvalid(draft, result.issues);
+    if (!result.ok) throw draftInvalid(draft, explainMockIssues(result.issues));
     return saveAll(admin, input, contentHash, result.projects);
   });
 }

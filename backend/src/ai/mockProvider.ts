@@ -19,7 +19,8 @@ export class MockAiProvider implements AiProvider {
   readonly name = 'mock';
 
   async extract({ transcript, meetingDate, directory }: ExtractionRequest): Promise<ExtractionDraft> {
-    const text = recapSection(transcript);
+    // Join hard line wraps (e.g. text copied from a PDF) so sentences split across lines still match.
+    const text = recapSection(transcript).replace(/\s+/g, ' ');
     const year = Number(meetingDate.slice(0, 4));
     const projectMatches = [...text.matchAll(PROJECT_RE)];
 

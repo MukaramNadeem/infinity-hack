@@ -73,7 +73,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     }
     res = USE_MOCK ? await mockFetch(path, init) : await fetch(`${API_URL}/api${path}`, init)
   } catch {
-    throw new ApiError(0, { error: { code: 'NETWORK_ERROR', message: 'Cannot reach the server. Is the backend running?' } })
+    // A network failure and a CORS rejection look the same to the browser, so name both causes.
+    const message = `Cannot reach the server at ${API_URL}. Is the backend running, and is this page's address (${window.location.origin}) allowed by FRONTEND_URL in backend/.env?`
+    throw new ApiError(0, { error: { code: 'NETWORK_ERROR', message } })
   }
 
   if (res.status === 204) return undefined as T

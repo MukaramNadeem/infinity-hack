@@ -124,6 +124,15 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-origin']).toBe('https://crm.novaworks.example');
   });
 
+  it('treats localhost and 127.0.0.1 as the same frontend origin', async () => {
+    const res = await api().get('/api/health').set('Origin', 'http://127.0.0.1:5173');
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('http://127.0.0.1:5173');
+
+    const otherPort = await api().get('/api/health').set('Origin', 'http://127.0.0.1:3000');
+    expect(otherPort.status).toBe(403);
+  });
+
   it('rejects other origins', async () => {
     const res = await api().get('/api/health').set('Origin', 'https://evil.example');
     expect(res.status).toBe(403);

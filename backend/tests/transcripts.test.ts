@@ -189,7 +189,16 @@ describe('Validation failures save nothing (all-or-nothing)', () => {
   it('transcript without any projects -> 422', async () => {
     const res = await importTranscript('We discussed the weather and lunch plans for next week. Nothing else.');
     expect(res.status).toBe(422);
-    expect(res.body.error.details).toEqual([{ path: 'projects', message: 'No projects were found in the transcript' }]);
+    expect(res.body.error.details).toEqual([{ path: 'projects', message: expect.stringContaining('No projects were found in the transcript') }]);
+    // With the offline mock active, the message explains why and how to use the real AI.
+    expect(res.body.error.details[0].message).toContain('offline mock AI is active');
+  });
+
+  it('the mock still parses a transcript with hard line wraps (e.g. copied from a PDF)', async () => {
+    const wrapped = SAMPLE_TRANSCRIPT.replace(/(.{60,100}?) /g, '$1\n');
+    const res = await importTranscript(wrapped);
+    expect(res.status).toBe(201);
+    expect(res.body.totals).toEqual({ projects: 3, tasks: 12, estimatedHours: 124 });
   });
 
   it('AI service failure -> 502 and nothing saved', async () => {
